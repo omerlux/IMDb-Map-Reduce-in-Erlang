@@ -21,7 +21,11 @@
 
 -behaviour(wx_object).
 
--export([start/1, init/1, terminate/2,  code_change/3,
+%% Client API
+-export([start/1]).
+
+%% wx_object callbacks
+-export([init/1, terminate/2,  code_change/3,
   handle_info/2, handle_call/3, handle_cast/2, handle_event/2]).
 
 -include_lib("wx/include/wx.hrl").
@@ -30,9 +34,8 @@
 {
   parent,
   config,
-  list_box
+  grid
 }).
-
 
 start(Config) ->
   wx_object:start_link(?MODULE, Config, []).
@@ -43,114 +46,45 @@ init(Config) ->
 
 do_init(Config) ->
   Parent = proplists:get_value(parent, Config),
-  Panel = wxScrolledWindow:new(Parent, []),
+  Panel = wxPanel:new(Parent, []),
 
   %% Setup sizers
   MainSizer = wxBoxSizer:new(?wxVERTICAL),
-  ListBoxSizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
-    [{label, "wxListBox"}]),
+  Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
+    [{label, "wxGrid"}]),
 
-  ChoiceSizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
-    [{label, "wxChoice"}]),
-  SpinSizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
-    [{label, "wxSpinCtrl"}]),
-  ComboSizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
-    [{label, "wxComboBox"}]),
-  Sizer = wxBoxSizer:new(?wxHORIZONTAL),
-  Sizer3  = wxBoxSizer:new(?wxHORIZONTAL),
-
-  Choices = ["one","two","three",
-    "four","five","six",
-    "seven","eight","nine",
-    "ten", "eleven", "twelve"],
-
-  %% Create a wxListBox that uses multiple selection
-  ListBox = wxListBox:new(Panel, 1, [{size, {-1,100}},
-    {choices, ["Multiple selection"|Choices]},
-    {style, ?wxLB_MULTIPLE}]),
-  wxListBox:setToolTip(ListBox, "A wxListBox with multiple selection"),
-
-  %% Create a wxListBox that uses single selection
-  ListBox2 = wxListBox:new(Panel, 2, [{size, {-1,100}},
-    {choices, ["Single selection"|Choices]},
-    {style, ?wxLB_SINGLE}]),
-  wxListBox:setToolTip(ListBox2, "A wxListBox with single selection"),
-
-  %% Create a wxChoice
-  Choice = wxChoice:new(Panel, 4, [{choices, Choices}]),
-  wxChoice:setToolTip(Choice, "A wxChoice"),
-
-  %% Create a wxSpinCtrl with range between 0 and 100
-  SpinCtrl = wxSpinCtrl:new(Panel, []),
-  wxSpinCtrl:setRange(SpinCtrl, 0, 100),
-  wxSpinCtrl:setToolTip(SpinCtrl, "A wxSpinCtrl with range from 0 to 100"),
-
-  %% Create a wxComboBox and set the value to "Default value"
-  ComboBox = wxComboBox:new(Panel, 5, [{choices, Choices}]),
-  wxComboBox:setToolTip(ComboBox, "A wxComboBox"),
-
-
-  wxChoice:connect(Choice,command_choice_selected),
-  wxSpinCtrl:connect(SpinCtrl,command_spinctrl_updated),
-  wxComboBox:connect(ComboBox, command_combobox_selected),
-
+  Grid = create_grid(Panel),
 
   %% Add to sizers
-  Options = [{border,4}, {flag, ?wxALL}],
-  wxSizer:add(Sizer, ListBox, Options),
-  wxSizer:add(Sizer, ListBox2, Options),
+  Options = [{flag, ?wxEXPAND}, {proportion, 1}],
 
-  wxSizer:add(ChoiceSizer, Choice, Options),
-  wxSizer:add(SpinSizer, SpinCtrl, Options),
-  wxSizer:add(Sizer3, ChoiceSizer, []),
-  wxSizer:add(Sizer3, SpinSizer, [{border, 4}, {flag, ?wxLEFT}]),
+  wxSizer:add(Sizer, Grid, Options),
+  wxSizer:add(MainSizer, Sizer, Options),
 
-  wxSizer:add(ComboSizer, ComboBox, Options),
-
-  wxSizer:add(ListBoxSizer, Sizer, Options),
-  wxSizer:add(MainSizer, ListBoxSizer, Options),
-  wxSizer:add(MainSizer, Sizer3, Options),
-  wxSizer:add(MainSizer, ComboSizer, Options),
-
-  wxScrolledWindow:setScrollRate(Panel, 5, 5),
   wxPanel:setSizer(Panel, MainSizer),
   {Panel, #state{parent=Panel, config=Config,
-    list_box = ListBox}}.
+    grid = Grid}}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Async Events are handled in handle_event as in handle_info
-handle_event(#wx{obj = ComboBox,
-  event = #wxCommand{type = command_combobox_selected}},
+handle_event(#wx{event = #wxGrid{type = grid_cell_change,
+  row = Row, col = Col}},
     State = #state{}) ->
-  Value = wxComboBox:getValue(ComboBox),
-  demo:format(State#state.config,"Selected wxComboBox ~p\n",[Value]),
-  {noreply, State};
-handle_event(#wx{event = #wxCommand{type = command_choice_selected,
-  cmdString = Value}},
-    State = #state{}) ->
-  demo:format(State#state.config,"Selected wxChoice ~p\n",[Value]),
-  {noreply, State};
-handle_event(#wx{event = #wxSpin{type = command_spinctrl_updated,
-  commandInt = Int}},
-    State = #state{}) ->
-  demo:format(State#state.config,"wxSpinCtrl changed to ~p\n",[Int]),
-  {noreply, State};
-handle_event(Ev = #wx{}, State = #state{}) ->
-  demo:format(State#state.config,"Got Event ~p\n",[Ev]),
+  Val = wxGrid:getCellValue(State#state.grid, Row, Col),
+  demo:format(State#state.config, "Cell {~p,~p} changed to ~p.\n",
+    [Row,Col,Val]),
   {noreply, State}.
 
 %% Callbacks handled as normal gen_server callbacks
-handle_info(Msg, State) ->
-  demo:format(State#state.config, "Got Info ~p\n",[Msg]),
+handle_info(_Msg, State) ->
   {noreply, State}.
 
 handle_call(shutdown, _From, State=#state{parent=Panel}) ->
   wxPanel:destroy(Panel),
   {stop, normal, ok, State};
 
-handle_call(Msg, _From, State) ->
-  demo:format(State#state.config,"Got Call ~p\n",[Msg]),
-  {reply, {error,nyi}, State}.
+handle_call(_Msg, _From, State) ->
+  {reply,{error, nyi}, State}.
 
 handle_cast(Msg, State) ->
   io:format("Got cast ~p~n",[Msg]),
@@ -159,10 +93,59 @@ handle_cast(Msg, State) ->
 code_change(_, _, State) ->
   {stop, ignore, State}.
 
-terminate(_Reason, _) ->
+terminate(_Reason, _State) ->
   ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Local functions
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+create_grid(Panel) ->
+  %% Create the grid with 100 * 5 cells
+  Grid = wxGrid:new(Panel, 2, []),
+  wxGrid:createGrid(Grid, 100, 5),
+
+  Font = wxFont:new(16, ?wxFONTFAMILY_SWISS,
+    ?wxFONTSTYLE_NORMAL,
+    ?wxFONTWEIGHT_NORMAL, []),
+  %% Fun to set the values and flags of the cells
+  Fun =
+    fun(Row) ->
+      wxGrid:setCellValue(Grid, Row, 0, "Editable"),
+      wxGrid:setCellValue(Grid, Row, 1, "Editable"),
+      wxGrid:setCellValue(Grid, Row, 2, "Editable"),
+      wxGrid:setCellValue(Grid, Row, 3, "Read only"),
+      wxGrid:setCellTextColour(Grid, Row, 3, ?wxWHITE),
+      wxGrid:setReadOnly(Grid, Row, 3, [{isReadOnly,true}]),
+      wxGrid:setCellValue(Grid, Row, 4, "Editable"),
+      case Row rem 4 of
+        0 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxRED);
+        1 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxGREEN),
+          wxGrid:setCellTextColour(Grid, Row, 2, {255,215,0,255});
+        2 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxBLUE);
+        _ -> wxGrid:setCellBackgroundColour(Grid, Row, 1, ?wxCYAN),
+          wxGrid:setCellValue(Grid, Row, 1,
+            "Centered\nhorizontally"),
+          wxGrid:setCellAlignment(Grid, Row, 4,
+            0,?wxALIGN_CENTER),
+          wxGrid:setCellValue(Grid, Row, 4,
+            "Centered\nvertically"),
+          wxGrid:setCellAlignment(Grid, Row, 1,
+            ?wxALIGN_CENTER,0),
+          wxGrid:setCellTextColour(Grid, Row, 3, ?wxBLACK),
+          wxGrid:setCellAlignment(Grid, Row, 2,
+            ?wxALIGN_CENTER,
+            ?wxALIGN_CENTER),
+          wxGrid:setCellFont(Grid, Row, 0, Font),
+          wxGrid:setCellValue(Grid, Row, 2,
+            "Centered vertically\nand horizontally"),
+          wxGrid:setRowSize(Grid, Row, 80)
+      end
+    end,
+  %% Apply the fun to each row
+  wx:foreach(Fun, lists:seq(0,99)),
+  wxGrid:setColSize(Grid, 2, 150),
+  wxGrid:connect(Grid, grid_cell_change),
+  Grid.
+
 
