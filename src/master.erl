@@ -7,7 +7,7 @@
 %%% Created : 30. ספט׳ 2020 15:51
 %%%-------------------------------------------------------------------
 -module(master).
--author("Ilay").
+-author("Ilay-Omer").
 
 -behaviour(gen_server).
 
@@ -30,7 +30,11 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+  gen_server:start_link({global, node()}, ?MODULE, [], []).
+%% note:
+%% working...
+%% to connect with 'node' master, we need to use net_adm:ping('node'),
+%% then we can send gen_server:func({global, 'node'}, _Request)
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -55,6 +59,7 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #master_state{}} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
 handle_call(_Request, _From, State = #master_state{}) ->
+  gen_server:reply(_From, ("Got the msg:" ++ _Request)),
   {reply, ok, State}.
 
 %% @private
@@ -64,6 +69,7 @@ handle_call(_Request, _From, State = #master_state{}) ->
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
 handle_cast(_Request, State = #master_state{}) ->
+  io:format("Message received: ~p",[_Request]),
   {noreply, State}.
 
 %% @private

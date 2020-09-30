@@ -7,7 +7,7 @@
 %%% Created : 29. ספט׳ 2020 20:39
 %%%-------------------------------------------------------------------
 -module(wxclient).
--author("Ilay").
+-author("Ilay-Omer").
 
 %% API
 -export([start/0]).
