@@ -15,24 +15,24 @@
 
 
 %% Will get the pid of server
-%% will send the information on button pressing
+%% will send the query on button pressing
 start() ->
 
-  %%note: Frame and components build
+  %%note: Frame and components build -----------------------------------------------------------------------------------
   WX = wx:new(),
   Frame = wxFrame:new(wx:null(), 1, "Disco Map-Reduce Project"), %%TODO whats the difference from Panel?
   MainSizer = wxBoxSizer:new(?wxVERTICAL),
   SubSizer1 = wxBoxSizer:new(?wxVERTICAL),
   SubSizer2 = wxBoxSizer:new(?wxVERTICAL),
   GridSizer = wxGridSizer:new(?wxVERTICAL),
-%%  ListBoxSizer = wxStaticBoxSizer:new(?wxVERTICAL, SubSizer1, [{label, "wxListBox"}]),
 
   TopTxt = wxStaticText:new(Frame, ?wxID_ANY, "Query Window"),
   Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value:"),
   TextCtrl  = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
+  wxTextCtrl:setToolTip(TextCtrl,"Enter your search value here"),
   Grid = create_grid(Frame),
   B31 = wxButton:new(Frame, 31, [{label,"Send Query"}, {style, ?wxBU_EXACTFIT}]),
-  wxButton:setToolTip(B31, "Minimal Size button"),
+  wxButton:setToolTip(B31, "Send your query to the disco"),
 
 
   Choices = ["Name","Year","Description", "Actor","Budget"],
@@ -41,11 +41,12 @@ start() ->
   %% Create a wxListBox that uses multiple selection
   ListBox = wxListBox:new(Frame, 1, [{size, {-1,100}},
     {choices, Choices}, {style, ?wxLB_SINGLE}]),
-  wxListBox:setToolTip(ListBox, "A wxListBox with multiple selection"),
+  wxListBox:setToolTip(ListBox, "Choose your search value category"),
 
   ComboBox = wxComboBox:new(Frame, 5, [{choices, Choices2}]),
-  wxComboBox:setToolTip(ComboBox, "A wxComboBox"),
+  wxComboBox:setToolTip(ComboBox, "Choose the category your interested in from the results"),
 
+  %%note: Sizers setup -------------------------------------------------------------------------------------------------
   wxSizer:add(SubSizer1, TopTxt, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, TextCtrl, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
