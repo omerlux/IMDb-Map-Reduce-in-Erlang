@@ -59,8 +59,13 @@ init([]) ->
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #master_state{}} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
+
+handle_call({query,SearchVal,SearchCategory,ResultCategory}, _From, State = #master_state{}) ->
+  gen_server:reply(_From, ("Got the msg: " ++ SearchVal ++ " "  ++ SearchCategory ++ " "  ++ ResultCategory )),
+  {reply, ok, State};
+
 handle_call(_Request, _From, State = #master_state{}) ->
-  gen_server:reply(_From, ("Got the msg:" ++ _Request)),
+  gen_server:reply(_From, ("Got the msg: " ++ _Request )),
   {reply, ok, State}.
 
 %% @private

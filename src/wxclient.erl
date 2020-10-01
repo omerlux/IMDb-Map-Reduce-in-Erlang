@@ -10,9 +10,19 @@
 -author("Ilay-Omer").
 
 %% API
--export([start/0]).
+-export([start/0,readfile/1]).
 -include_lib("wx/include/wx.hrl").
-
+-record(state,
+{
+  parent,
+  config
+}).
+-record(query,
+{
+  searchVal,
+  searchCategory,
+  resultCategory
+}).
 
 %% Will get the pid of server
 %% will send the query on button pressing
@@ -31,8 +41,9 @@ start() ->
   TextCtrl  = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
   wxTextCtrl:setToolTip(TextCtrl,"Enter your search value here"),
   Grid = create_grid(Frame),
-  B31 = wxButton:new(Frame, 31, [{label,"Send Query"}, {style, ?wxBU_EXACTFIT}]),
-  wxButton:setToolTip(B31, "Send your query to the disco"),
+  ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label,"Send Query"}, {style, ?wxBU_EXACTFIT}]),
+  wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
+  wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},{userData, wx:get_env()}]),
 
 
   Choices = ["Name","Year","Description", "Actor","Budget"],
@@ -52,7 +63,7 @@ start() ->
   wxSizer:add(SubSizer1, TextCtrl, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ListBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ComboBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  wxSizer:add(SubSizer1, B31, [{flag, ?wxALL}, {border, 8}]),
+  wxSizer:add(SubSizer1, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
   wxSizer:add(GridSizer, Grid, [{flag, ?wxALL bor ?wxEXPAND }, {border, 8}]),%%TODO hide it at startup?
 
   Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL,[{underlined, true}]),
@@ -113,3 +124,21 @@ create_grid(Panel) ->
   wxGrid:setColSize(Grid, 2, 150),
   wxGrid:connect(Grid, grid_cell_change),
   Grid.
+
+%%handle_event(#wx{event=#wxCommand{type=command_button_clicked }}) ->
+
+handle_click_event(#wx{},_B) ->
+  Query = #query{searchVal = "italy",searchCategory = "county",resultCategory = "Number of Results"},
+  [MasterNode|_T] = readfile (["clientslist.txt"]),
+  Reply = gen_server:call({masterpid,list_to_atom(MasterNode)},Query),
+  Window2=wxWindow:new(),
+  Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
+  wxStaticText:new(Frame2, ?wxID_ANY, Reply),
+  wxFrame:show(Frame2),
+  wxWindow:show(Window2).
+
+%% readfile - read file as strings separated by lines
+readfile(FileName) ->
+  {ok, Binary} = file:read_file(FileName),
+  string:tokens(erlang:binary_to_list(Binary), "\r\n").
+
