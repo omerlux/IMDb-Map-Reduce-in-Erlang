@@ -1,3 +1,0 @@
-master@ip
-client1@ip
-client2@ip
