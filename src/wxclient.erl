@@ -10,8 +10,15 @@
 -author("Ilay-Omer").
 
 %% API
--export([start/0]).
+-export([init/0]).
 -include_lib("wx/include/wx.hrl").
+
+init() ->
+  %% to address this process - send message to {client, 'node'}
+  %% to address the master - send message to {global, master@ip}
+  Pid = spawn(wxclient, start, []),
+  register(client, Pid).
+
 
 
 %% Will get the pid of server
