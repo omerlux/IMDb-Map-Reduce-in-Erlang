@@ -20,7 +20,6 @@ init() ->
   register(client, Pid).
 
 
-
 %% Will get the pid of server
 %% will send the query on button pressing
 start() ->
