@@ -10,14 +10,8 @@
 -author("Ilay-Omer").
 
 %% API
--export([init/0]).
+-export([start/0]).
 -include_lib("wx/include/wx.hrl").
-
-init() ->
-  %% to address this process - send message to {client, 'node'}
-  %% to address the master - send message to {global, master@ip}
-  Pid = spawn(wxclient, start, []),
-  register(client, Pid).
 
 
 %% Will get the pid of server
@@ -26,7 +20,7 @@ start() ->
 
   %%note: Frame and components build -----------------------------------------------------------------------------------
   WX = wx:new(),
-  Frame = wxFrame:new(wx:null(), 1, "Disco Map-Reduce Project"), %%TODO whats the difference from Panel?
+  Frame = wxFrame:new(WX, 1, "Disco Map-Reduce Project"), %%TODO whats the difference from Panel?
   MainSizer = wxBoxSizer:new(?wxVERTICAL),
   SubSizer1 = wxBoxSizer:new(?wxVERTICAL),
   SubSizer2 = wxBoxSizer:new(?wxVERTICAL),

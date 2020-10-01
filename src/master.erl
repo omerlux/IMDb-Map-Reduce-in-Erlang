@@ -30,7 +30,8 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
-  gen_server:start_link({global, node()}, ?MODULE, [], []).
+  {ok, Pid} = gen_server:start_link({global, node()}, ?MODULE, [], []),
+  register(masterpid, Pid).
 %% note:
 %% working...
 %% to connect with 'node' master, we need to use net_adm:ping('node'),
