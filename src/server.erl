@@ -22,13 +22,15 @@
 
 -define(SERVER, ?MODULE).
 
--record(server_state, {}).
--record(movie_data, {title,	original_title,	year,
+-record(server_state, {table = none}).
+-record(movie_data, {id, title,	original_title,	year,
   date_published, genre, duration, country, language,	director,
   writer, production_company,	actors,	description,	avg_vote,
   votes,	budget,	usa_gross_income,	worlwide_gross_income,
-  metascore, reviews_from_users,	reviews_from_critics}).
+  metascore, reviews_from_users, reviews_from_critics}).
 
+%% Create a preprocessor
+-define(MOVIE_RECORD,record_info(fields, movie_data)).
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -63,6 +65,8 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #server_state{}} |
   {stop, Reason :: term(), NewState :: #server_state{}}).
 handle_call(_Request, _From, State = #server_state{}) ->
+  Details = ets:tab2list(State#server_state.table),
+  gen_server:reply(_From, Details),
   {reply, ok, State}.
 
 %% @private
@@ -74,9 +78,9 @@ handle_call(_Request, _From, State = #server_state{}) ->
 handle_cast({store,Data}, State = #server_state{}) ->
   N = atom_to_list(node()),
   Node = string:sub_string(N, 1, string:cspan(N, "@")),
-  io:format("~p received data, saving it...", [Node]),
-  saveData(Data),
-  {noreply, State};
+  io:format("~p received data, saving it...~n", [Node]),
+  Table = saveData(Data),
+  {noreply, #server_state{ table = Table}};
 handle_cast(_Request, State = #server_state{}) ->
   {noreply, State}.
 
@@ -113,25 +117,36 @@ code_change(_OldVsn, State = #server_state{}, _Extra) ->
 
 %% saveData - saving data into ets
 saveData(Data) ->
-  ets:new(moviesdb, [set, named_table]),
-  MovieList = keyVal(Data).
-
+  Table = ets:new(moviesdb, [set, named_table]),
+  keyVal(Data),
+  Table.
 
 %% keyVal - creates list of {key, value} for ets insertion
 keyVal([]) ->
   ok;
 keyVal([H|T]) ->
-  Tuple = create_record_from_tuple(?mov)
+  Id = element(1, H),
+  Details = #movie_data{
+      title = element(2, H),
+      original_title = element(3, H),
+      year = element(4, H),
+      date_published = element(5, H),
+      genre = element(6, H),
+      duration = element(7, H),
+      country = element(8, H),
+      language = element(9, H),
+      director = element(10, H),
+      writer = element(11, H),
+      production_company = element(12, H),
+      actors = element(13, H),
+      description = element(14, H),
+      avg_vote = element(15, H),
+      votes = element(16, H),
+      budget = element(17, H),
+      usa_gross_income = element(18, H),
+      worlwide_gross_income = element(19, H),
+      metascore = element(20, H),
+      reviews_from_users = element(21, H),
+      reviews_from_critics = element(22, H) },
+  ets:insert(moviesdb, {Id, Details}),
   keyVal(T).
-
-
-
-
-%% create_record_from_tuple - creates a record from tuple
-create_record_from_tuple([Field|Rest],Data,Result) ->
-  case lists:keysearch(Field,1,Data) of
-    {value,{_,Value}} ->
-      create_record_from_tuple(Rest,Data,lists:append(Result,[Value]));
-    _ ->
-      create_record_from_tuple(Rest,Data,lists:append(Result,[undefined]))
-  end.
