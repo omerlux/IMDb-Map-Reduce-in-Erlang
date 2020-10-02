@@ -19,6 +19,7 @@
 }).
 -record(query,
 {
+  type,
   searchVal,
   searchCategory,
   resultCategory
@@ -130,12 +131,13 @@ create_grid(Panel) ->
 handle_click_event(A = #wx{},_B)  ->
   {Env,TextBox,ListBox,ComboBox} = A#wx.userData,
   wx:set_env(Env),
-  Query = #query{searchVal = wxTextCtrl:getValue(TextBox),
+  Query = #query{type = generic,
+                 searchVal = wxTextCtrl:getValue(TextBox),
                  searchCategory = wxListBox:getString(ListBox,wxListBox:getSelection(ListBox)),
                  resultCategory = wxComboBox:getValue(ComboBox)},
   [MasterNode|_T] = readfile (["clientslist.txt"]),
   Reply = gen_server:call({masterpid,list_to_atom(MasterNode)},Query),
-  Window2=wxWindow:new(),
+  Window2 = wxWindow:new(),
   Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
   wxStaticText:new(Frame2, ?wxID_ANY, Reply),
   wxFrame:show(Frame2),

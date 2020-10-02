@@ -21,7 +21,7 @@
 -define(SERVER, ?MODULE).
 
 -record(master_state, {}).
-
+-record(query, {searchVal, searchCategory, resultCategory}).
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -30,6 +30,7 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
+  %%TODO add the distribution of the data to the servers
   {ok, Pid} = gen_server:start_link({global, node()}, ?MODULE, [], []),
   register(masterpid, Pid).
 %% note:
@@ -60,13 +61,14 @@ init([]) ->
   {stop, Reason :: term(), Reply :: term(), NewState :: #master_state{}} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
 
-handle_call({query,SearchVal,SearchCategory,ResultCategory}, _From, State = #master_state{}) ->
-  gen_server:reply(_From, ("Got the msg: " ++ SearchVal ++ " "  ++ SearchCategory ++ " "  ++ ResultCategory )),
-  {reply, ok, State};
+%%handle_call({query,generic,SearchVal,SearchCategory,ResultCategory}, _From, State = #master_state{}) ->
+%%
+%%  %%gen_server:reply(_From, ("Your Query is: Get "++ ResultCategory ++ " of all movies " ++ SearchCategory ++ "'s containing: " ++ SearchVal)),
+%%  Reply = ("Your Query is: Get "++ ResultCategory ++ " of all movies " ++ SearchCategory ++ "'s containing: " ++ SearchVal),
+%%  {reply, Reply, State};
 
-handle_call(_Request, _From, State = #master_state{}) ->
-  gen_server:reply(_From, ("Got the msg: " ++ _Request )),
-  {reply, ok, State}.
+handle_call(Query = #query{}, _From, State = #master_state{}) ->
+  {reply, sendQuery(Query), State}.
 
 %% @private
 %% @doc Handling cast messages
@@ -108,3 +110,41 @@ code_change(_OldVsn, State = #master_state{}, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+sendQuery(Query = #query{}) ->
+  Servers = readfile(["serverslist.txt"]),
+  NumberOfServers = countList(Servers),
+  sendQuery(Query,Servers,NumberOfServers).
+
+sendQuery(_Query = #query{},[],NumberOfServers) ->
+  gather(NumberOfServers);
+
+sendQuery(Query = #query{},[Server0|T],_NumberOfServers) ->
+  spawn(master, sendServerJob, [self(),Query,Server0]),
+  sendQuery(Query,T,_NumberOfServers).
+
+sendServerJob(ParentPID,Query = #query{},Server) ->
+  ServerNode = list_to_atom(Server),
+  % sending from gen_server the values of the data
+  Reply = gen_server:call({serverpid, ServerNode}, Query),
+  ParentPID ! Reply.
+
+gather(ExpectedResults) ->
+  receive
+    Result -> [Result | gather(ExpectedResults-1)]
+  end;
+
+gather(0) -> [].
+
+%% readfile - read file as strings separated by lines
+readfile(FileName) ->
+  {ok, Binary} = file:read_file(FileName),
+  string:tokens(erlang:binary_to_list(Binary), "\r\n").
+
+%% countList - returning the number of string elements in the list
+countList([_|T]) ->
+  count(1, T).
+count(X,[_|T]) ->
+  count(X+1, T);
+count(X,[]) ->
+  X.
