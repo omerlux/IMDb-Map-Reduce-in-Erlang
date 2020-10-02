@@ -22,7 +22,7 @@ distribute() ->
   NumRows = lists:flatlength(CSV) - 1,
   Servers = readfile(["serverslist.txt"]),
   NumServers = countList(Servers),
-  sendData(CSV, Servers, {2, NumRows, ceil(NumRows/NumServers)}). % {start, stop, jump}
+  sendData(CSV, Servers, {2, NumRows, ceil(NumRows / NumServers)}). % {start, stop, jump}
 
 
 %% readfile - read file as strings separated by lines
@@ -32,11 +32,11 @@ readfile(FileName) ->
 
 
 %% countList - returning the number of string elements in the list
-countList([_|T]) ->
+countList([_ | T]) ->
   count(1, T).
-count(X,[_|T]) ->
-  count(X+1, T);
-count(X,[]) ->
+count(X, [_ | T]) ->
+  count(X + 1, T);
+count(X, []) ->
   X.
 
 
@@ -44,11 +44,11 @@ count(X,[]) ->
 sendData(_CSV, [], {_, _, _}) ->
   io:format("Sent all data...");
 
-sendData(CSV, [Sx|Servers], {Start, NumRows, Jump}) ->
+sendData(CSV, [Sx | Servers], {Start, NumRows, Jump}) ->
   NextStart = Start + Jump,
   % spawning a sender process
   spawn(dataDistributor, sendServerJob, [lists:sublist(CSV, Start, Jump), Sx]),
-  io:format("send to ~p, lines ~p to ~p.~n",[Sx, Start, min(NextStart - 1, NumRows)]),
+  io:format("send to ~p, lines ~p to ~p.~n", [Sx, Start, min(NextStart - 1, NumRows)]),
   sendData(CSV, Servers, {NextStart, NumRows, Jump}).
 
 

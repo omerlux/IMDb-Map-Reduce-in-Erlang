@@ -24,10 +24,10 @@
 
 -record(server_state, {table = none}).
 
--record(movie_data, {id, title,	original_title,	year,
-  date_published, genre, duration, country, language,	director,
-  writer, production_company,	actors,	description,	avg_vote,
-  votes,	budget,	usa_gross_income,	worlwide_gross_income,
+-record(movie_data, {id, title, original_title, year,
+  date_published, genre, duration, country, language, director,
+  writer, production_company, actors, description, avg_vote,
+  votes, budget, usa_gross_income, worlwide_gross_income,
   metascore, reviews_from_users, reviews_from_critics}).
 
 -record(query,
@@ -39,7 +39,7 @@
 }).
 
 %% Create a preprocessor
--define(MOVIE_RECORD,record_info(fields, movie_data)).
+-define(MOVIE_RECORD, record_info(fields, movie_data)).
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -80,8 +80,7 @@ handle_call(test, _From, State = #server_state{}) ->
 %% #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
 handle_call(Query = #query{}, _From, State = #server_state{}) ->
   % ets table is 'Table'
-  #server_state{table = Table} = State,
-  Return = mapreduce:get(Table, Query),
+  Return = mapreduce:map(State#server_state.table, Query),
   {reply, Return, State};  % Return is the reply
 %% all other queries won't be replied
 handle_call(_Request, _From, State = #server_state{}) ->
@@ -93,13 +92,14 @@ handle_call(_Request, _From, State = #server_state{}) ->
   {noreply, NewState :: #server_state{}} |
   {noreply, NewState :: #server_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #server_state{}}).
-handle_cast({store,Data}, State = #server_state{}) ->
+handle_cast({store, Data}, State = #server_state{}) ->
   N = atom_to_list(node()),
   Node = string:sub_string(N, 1, string:cspan(N, "@")),
   io:format(Node ++ " received data. Saving...~n"),
   Table = saveData(Data),
+  %TODO: add timestamp for sending the data
   io:format("Done!~n"),
-  {noreply, State#server_state{ table = Table}};
+  {noreply, State#server_state{table = Table}};
 handle_cast(_Request, State = #server_state{}) ->
   {noreply, State}.
 
@@ -143,29 +143,29 @@ saveData(Data) ->
 %% keyVal - creates list of {key, value} for ets insertion
 keyVal([]) ->
   ok;
-keyVal([H|T]) ->
+keyVal([H | T]) ->
   Id = element(1, H),
   Details = #movie_data{
-      title = element(2, H),
-      original_title = element(3, H),
-      year = element(4, H),
-      date_published = element(5, H),
-      genre = element(6, H),
-      duration = element(7, H),
-      country = element(8, H),
-      language = element(9, H),
-      director = element(10, H),
-      writer = element(11, H),
-      production_company = element(12, H),
-      actors = element(13, H),
-      description = element(14, H),
-      avg_vote = element(15, H),
-      votes = element(16, H),
-      budget = element(17, H),
-      usa_gross_income = element(18, H),
-      worlwide_gross_income = element(19, H),
-      metascore = element(20, H),
-      reviews_from_users = element(21, H),
-      reviews_from_critics = element(22, H) },
+    title = element(2, H),
+    original_title = element(3, H),
+    year = element(4, H),
+    date_published = element(5, H),
+    genre = element(6, H),
+    duration = element(7, H),
+    country = element(8, H),
+    language = element(9, H),
+    director = element(10, H),
+    writer = element(11, H),
+    production_company = element(12, H),
+    actors = element(13, H),
+    description = element(14, H),
+    avg_vote = element(15, H),
+    votes = element(16, H),
+    budget = element(17, H),
+    usa_gross_income = element(18, H),
+    worlwide_gross_income = element(19, H),
+    metascore = element(20, H),
+    reviews_from_users = element(21, H),
+    reviews_from_critics = element(22, H)},
   ets:insert(moviesdb, {Id, Details}),
   keyVal(T).
