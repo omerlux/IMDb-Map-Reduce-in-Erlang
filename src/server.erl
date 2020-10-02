@@ -23,11 +23,20 @@
 -define(SERVER, ?MODULE).
 
 -record(server_state, {table = none}).
+
 -record(movie_data, {id, title,	original_title,	year,
   date_published, genre, duration, country, language,	director,
   writer, production_company,	actors,	description,	avg_vote,
   votes,	budget,	usa_gross_income,	worlwide_gross_income,
   metascore, reviews_from_users, reviews_from_critics}).
+
+-record(query,
+{
+  type,
+  searchVal,
+  searchCategory,
+  resultCategory
+}).
 
 %% Create a preprocessor
 -define(MOVIE_RECORD,record_info(fields, movie_data)).
@@ -64,9 +73,18 @@ init([]) ->
   {noreply, NewState :: #server_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #server_state{}} |
   {stop, Reason :: term(), NewState :: #server_state{}}).
-handle_call(_Request, _From, State = #server_state{}) ->
+%% a test query to get info
+handle_call(test, _From, State = #server_state{}) ->
   Details = ets:tab2list(State#server_state.table),
-  gen_server:reply(_From, Details),
+  {reply, Details, State};
+%% #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
+handle_call(Query = #query{}, _From, State = #server_state{}) ->
+  % ets table is 'Table'
+  #server_state{table = Table} = State,
+  Return = mapreduce:get(Table, Query),
+  {reply, Return, State};  % Return is the reply
+%% all other queries won't be replied
+handle_call(_Request, _From, State = #server_state{}) ->
   {reply, ok, State}.
 
 %% @private
@@ -78,9 +96,10 @@ handle_call(_Request, _From, State = #server_state{}) ->
 handle_cast({store,Data}, State = #server_state{}) ->
   N = atom_to_list(node()),
   Node = string:sub_string(N, 1, string:cspan(N, "@")),
-  io:format("~p received data, saving it...~n", [Node]),
+  io:format(Node ++ " received data. Saving...~n"),
   Table = saveData(Data),
-  {noreply, #server_state{ table = Table}};
+  io:format("Done!~n"),
+  {noreply, State#server_state{ table = Table}};
 handle_cast(_Request, State = #server_state{}) ->
   {noreply, State}.
 
@@ -117,7 +136,7 @@ code_change(_OldVsn, State = #server_state{}, _Extra) ->
 
 %% saveData - saving data into ets
 saveData(Data) ->
-  Table = ets:new(moviesdb, [set, named_table]),
+  Table = ets:new(moviesdb, [set, named_table, {read_concurrency, true}]),
   keyVal(Data),
   Table.
 
