@@ -12,7 +12,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/0,sendServerJob/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
@@ -122,25 +122,27 @@ sendQuery(_Query = #query{}, [], NumberOfServers) ->
   gather(NumberOfServers);
 
 sendQuery(Query = #query{}, [Server0 | T], _NumberOfServers) ->
-  io:format("Entered sendQuery function spawning process for server ~p",[Server0]),
+  io:format("Entered sendQuery function spawning process for server ~p~n",[Server0]),
   spawn(master, sendServerJob, [self(), Query, Server0]),
   sendQuery(Query, T, _NumberOfServers).
 
 sendServerJob(ParentPID, Query = #query{}, Server) ->
-%%  io:format("Entered sendServerJon function of server ~p",[Server]),
+%%  io:format("Entered sendServerJon function of server ~p~n",[Server]),
   ServerNode = list_to_atom(Server),
   % sending from gen_server the values of the data
   %Reply = gen_server:call({serverpid, ServerNode}, Query), note: comment for testing
-  Reply = self(), %%note: for testing
+  Reply = 5, %%note: for testing
   ParentPID ! Reply.
 
+
+gather(0) -> [];
 gather(ExpectedResults) ->
-  io:format("Entered gather function expecting ~p results",[ExpectedResults]),
+  io:format("Entered gather function expecting ~p results ~n",[ExpectedResults]),
   receive
     Result -> [Result | gather(ExpectedResults - 1)]
-  end;
+  end.
 
-gather(0) -> [].
+
 
 %% readfile - read file as strings separated by lines
 readfile(FileName) ->

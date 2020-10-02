@@ -17,13 +17,8 @@
   parent,
   config
 }).
--record(query,
-{
-  type,
-  searchVal,
-  searchCategory,
-  resultCategory
-}).
+-record(query,{type, searchVal, searchCategory, resultCategory}).
+
 
 %% Will get the pid of server
 %% will send the query on button pressing
@@ -139,7 +134,7 @@ handle_click_event(A = #wx{}, _B) ->
   Reply = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
   Window2 = wxWindow:new(),
   Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
-  wxStaticText:new(Frame2, ?wxID_ANY, Reply),
+  wxStaticText:new(Frame2, ?wxID_ANY, lists:concat(Reply)),
   wxFrame:show(Frame2),
   wxWindow:show(Window2).
 
