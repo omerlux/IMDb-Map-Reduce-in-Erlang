@@ -43,11 +43,10 @@ start() ->
   Grid = create_grid(Frame),
   ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label,"Send Query"}, {style, ?wxBU_EXACTFIT}]),
   wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
-  wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},{userData, wx:get_env()}]),
 
 
-  Choices = ["Name","Year","Description", "Actor","Budget"],
-  Choices2 = ["Name","Year","Description", "Actor","Budget","Number of Results"],
+  Choices = ["Title","Year","Genre","Duration","Country","Language","Director","Writer","Production Company","Actor","Description","Score","Budget"],
+  Choices2 = ["Title","Year","Genre","Duration","Country","Language","Director","Writer","Production Company","Actor","Description","Score","Budget","Number of results"],
 
   %% Create a wxListBox that uses multiple selection
   ListBox = wxListBox:new(Frame, 1, [{size, {-1,100}},
@@ -56,6 +55,9 @@ start() ->
 
   ComboBox = wxComboBox:new(Frame, 5, [{choices, Choices2}]),
   wxComboBox:setToolTip(ComboBox, "Choose the category your interested in from the results"),
+
+  wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
+    {userData, {wx:get_env(),TextCtrl,ListBox,ComboBox}}]),
 
   %%note: Sizers setup -------------------------------------------------------------------------------------------------
   wxSizer:add(SubSizer1, TopTxt, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
@@ -125,10 +127,12 @@ create_grid(Panel) ->
   wxGrid:connect(Grid, grid_cell_change),
   Grid.
 
-%%handle_event(#wx{event=#wxCommand{type=command_button_clicked }}) ->
-
-handle_click_event(#wx{},_B) ->
-  Query = #query{searchVal = "italy",searchCategory = "county",resultCategory = "Number of Results"},
+handle_click_event(A = #wx{},_B)  ->
+  {Env,TextBox,ListBox,ComboBox} = A#wx.userData,
+  wx:set_env(Env),
+  Query = #query{searchVal = wxTextCtrl:getValue(TextBox),
+                 searchCategory = wxListBox:getString(ListBox,wxListBox:getSelection(ListBox)),
+                 resultCategory = wxComboBox:getValue(ComboBox)},
   [MasterNode|_T] = readfile (["clientslist.txt"]),
   Reply = gen_server:call({masterpid,list_to_atom(MasterNode)},Query),
   Window2=wxWindow:new(),
