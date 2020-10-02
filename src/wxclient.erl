@@ -10,7 +10,7 @@
 -author("Ilay-Omer").
 
 %% API
--export([start/0,readfile/1]).
+-export([start/0, readfile/1]).
 -include_lib("wx/include/wx.hrl").
 -record(state,
 {
@@ -39,18 +39,18 @@ start() ->
 
   TopTxt = wxStaticText:new(Frame, ?wxID_ANY, "Query Window"),
   Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value:"),
-  TextCtrl  = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
-  wxTextCtrl:setToolTip(TextCtrl,"Enter your search value here"),
+  TextCtrl = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
+  wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here"),
   Grid = create_grid(Frame),
-  ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label,"Send Query"}, {style, ?wxBU_EXACTFIT}]),
+  ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
   wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
 
 
-  Choices = ["Title","Year","Genre","Duration","Country","Language","Director","Writer","Production Company","Actor","Description","Score","Budget"],
-  Choices2 = ["Title","Year","Genre","Duration","Country","Language","Director","Writer","Production Company","Actor","Description","Score","Budget","Number of results"],
+  Choices = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
+  Choices2 = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget", "Number of results"],
 
   %% Create a wxListBox that uses multiple selection
-  ListBox = wxListBox:new(Frame, 1, [{size, {-1,100}},
+  ListBox = wxListBox:new(Frame, 1, [{size, {-1, 100}},
     {choices, Choices}, {style, ?wxLB_SINGLE}]),
   wxListBox:setToolTip(ListBox, "Choose your search value category"),
 
@@ -58,7 +58,7 @@ start() ->
   wxComboBox:setToolTip(ComboBox, "Choose the category your interested in from the results"),
 
   wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
-    {userData, {wx:get_env(),TextCtrl,ListBox,ComboBox}}]),
+    {userData, {wx:get_env(), TextCtrl, ListBox, ComboBox}}]),
 
   %%note: Sizers setup -------------------------------------------------------------------------------------------------
   wxSizer:add(SubSizer1, TopTxt, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
@@ -67,14 +67,14 @@ start() ->
   wxSizer:add(SubSizer1, ListBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ComboBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
-  wxSizer:add(GridSizer, Grid, [{flag, ?wxALL bor ?wxEXPAND }, {border, 8}]),%%TODO hide it at startup?
+  wxSizer:add(GridSizer, Grid, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),%%TODO hide it at startup?
 
-  Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL,[{underlined, true}]),
+  Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL, [{underlined, true}]),
   wxTextCtrl:setFont(TopTxt, Font),
   wxSizer:add(MainSizer, SubSizer1, [{flag, ?wxALIGN_LEFT}, {border, 5}]),
   wxSizer:add(MainSizer, SubSizer2, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
   wxSizer:add(SubSizer2, GridSizer, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
-  wxSizer:hide(SubSizer2,GridSizer,[{recursive, true}]),
+  wxSizer:hide(SubSizer2, GridSizer, [{recursive, true}]),
 
   wxWindow:setSizer(Frame, MainSizer),
   wxFrame:show(Frame).
@@ -96,22 +96,22 @@ create_grid(Panel) ->
       wxGrid:setCellValue(Grid, Row, 2, "Editable"),
       wxGrid:setCellValue(Grid, Row, 3, "Read only"),
       wxGrid:setCellTextColour(Grid, Row, 3, ?wxWHITE),
-      wxGrid:setReadOnly(Grid, Row, 3, [{isReadOnly,true}]),
+      wxGrid:setReadOnly(Grid, Row, 3, [{isReadOnly, true}]),
       wxGrid:setCellValue(Grid, Row, 4, "Editable"),
       case Row rem 4 of
         0 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxRED);
         1 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxGREEN),
-          wxGrid:setCellTextColour(Grid, Row, 2, {255,215,0,255});
+          wxGrid:setCellTextColour(Grid, Row, 2, {255, 215, 0, 255});
         2 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxBLUE);
         _ -> wxGrid:setCellBackgroundColour(Grid, Row, 1, ?wxCYAN),
           wxGrid:setCellValue(Grid, Row, 1,
             "Centered\nhorizontally"),
           wxGrid:setCellAlignment(Grid, Row, 4,
-            0,?wxALIGN_CENTER),
+            0, ?wxALIGN_CENTER),
           wxGrid:setCellValue(Grid, Row, 4,
             "Centered\nvertically"),
           wxGrid:setCellAlignment(Grid, Row, 1,
-            ?wxALIGN_CENTER,0),
+            ?wxALIGN_CENTER, 0),
           wxGrid:setCellTextColour(Grid, Row, 3, ?wxBLACK),
           wxGrid:setCellAlignment(Grid, Row, 2,
             ?wxALIGN_CENTER,
@@ -123,20 +123,20 @@ create_grid(Panel) ->
       end
     end,
   %% Apply the fun to each row
-  wx:foreach(Fun, lists:seq(0,99)),
+  wx:foreach(Fun, lists:seq(0, 99)),
   wxGrid:setColSize(Grid, 2, 150),
   wxGrid:connect(Grid, grid_cell_change),
   Grid.
 
-handle_click_event(A = #wx{},_B)  ->
-  {Env,TextBox,ListBox,ComboBox} = A#wx.userData,
+handle_click_event(A = #wx{}, _B) ->
+  {Env, TextBox, ListBox, ComboBox} = A#wx.userData,
   wx:set_env(Env),
   Query = #query{type = generic,
-                 searchVal = wxTextCtrl:getValue(TextBox),
-                 searchCategory = wxListBox:getString(ListBox,wxListBox:getSelection(ListBox)),
-                 resultCategory = wxComboBox:getValue(ComboBox)},
-  [MasterNode|_T] = readfile (["clientslist.txt"]),
-  Reply = gen_server:call({masterpid,list_to_atom(MasterNode)},Query),
+    searchVal = wxTextCtrl:getValue(TextBox),
+    searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)),
+    resultCategory = wxComboBox:getValue(ComboBox)},
+  [MasterNode | _T] = readfile(["clientslist.txt"]),
+  Reply = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
   Window2 = wxWindow:new(),
   Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
   wxStaticText:new(Frame2, ?wxID_ANY, Reply),

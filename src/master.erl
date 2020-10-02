@@ -21,7 +21,7 @@
 -define(SERVER, ?MODULE).
 
 -record(master_state, {}).
--record(query, {searchVal, searchCategory, resultCategory}).
+-record(query,{type, searchVal, searchCategory, resultCategory}).
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -68,7 +68,9 @@ init([]) ->
 %%  {reply, Reply, State};
 
 handle_call(Query = #query{}, _From, State = #master_state{}) ->
-  {reply, sendQuery(Query), State}.
+  Result = sendQuery(Query),
+  io:format("** RESULTS ** ~p",[Result]),
+  {reply, Result, State}.
 
 %% @private
 %% @doc Handling cast messages
@@ -77,7 +79,7 @@ handle_call(Query = #query{}, _From, State = #master_state{}) ->
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
 handle_cast(_Request, State = #master_state{}) ->
-  io:format("Message received: ~p",[_Request]),
+  io:format("Message received: ~p", [_Request]),
   {noreply, State}.
 
 %% @private
@@ -114,24 +116,28 @@ code_change(_OldVsn, State = #master_state{}, _Extra) ->
 sendQuery(Query = #query{}) ->
   Servers = readfile(["serverslist.txt"]),
   NumberOfServers = countList(Servers),
-  sendQuery(Query,Servers,NumberOfServers).
+  sendQuery(Query, Servers, NumberOfServers).
 
-sendQuery(_Query = #query{},[],NumberOfServers) ->
+sendQuery(_Query = #query{}, [], NumberOfServers) ->
   gather(NumberOfServers);
 
-sendQuery(Query = #query{},[Server0|T],_NumberOfServers) ->
-  spawn(master, sendServerJob, [self(),Query,Server0]),
-  sendQuery(Query,T,_NumberOfServers).
+sendQuery(Query = #query{}, [Server0 | T], _NumberOfServers) ->
+  io:format("Entered sendQuery function spawning process for server ~p",[Server0]),
+  spawn(master, sendServerJob, [self(), Query, Server0]),
+  sendQuery(Query, T, _NumberOfServers).
 
-sendServerJob(ParentPID,Query = #query{},Server) ->
+sendServerJob(ParentPID, Query = #query{}, Server) ->
+%%  io:format("Entered sendServerJon function of server ~p",[Server]),
   ServerNode = list_to_atom(Server),
   % sending from gen_server the values of the data
-  Reply = gen_server:call({serverpid, ServerNode}, Query),
+  %Reply = gen_server:call({serverpid, ServerNode}, Query), note: comment for testing
+  Reply = self(), %%note: for testing
   ParentPID ! Reply.
 
 gather(ExpectedResults) ->
+  io:format("Entered gather function expecting ~p results",[ExpectedResults]),
   receive
-    Result -> [Result | gather(ExpectedResults-1)]
+    Result -> [Result | gather(ExpectedResults - 1)]
   end;
 
 gather(0) -> [].
@@ -142,9 +148,9 @@ readfile(FileName) ->
   string:tokens(erlang:binary_to_list(Binary), "\r\n").
 
 %% countList - returning the number of string elements in the list
-countList([_|T]) ->
+countList([_ | T]) ->
   count(1, T).
-count(X,[_|T]) ->
-  count(X+1, T);
-count(X,[]) ->
+count(X, [_ | T]) ->
+  count(X + 1, T);
+count(X, []) ->
   X.
