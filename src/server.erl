@@ -77,10 +77,10 @@ handle_call(test, _From, State = #server_state{}) ->
   Details = ets:tab2list(State#server_state.table_name),
   {reply, Details, State};
 %% #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
-handle_call(Query = #query{}, _From, State = #server_state{}) ->
-  %TODO: make it a seperate process
-  Return = mapreduce:get(State#server_state.table_name, Query),
-  {reply, Return, State};  % Return is the reply
+handle_call(Query = #query{}, {FromPID, _Tag}, State = #server_state{}) ->
+  PID = spawn(fun() -> sendMapreduce(Query, State#server_state.table_name, FromPID) end),
+  io:format("Received map-reduce query from ~p, created PID ~p~n",[FromPID,PID]),
+  {reply, ok, State};  % reply is ok, pid will return the answer...
 %% all other queries won't be replied
 handle_call(_Request, _From, State = #server_state{}) ->
   {reply, ok, State}.
@@ -92,6 +92,8 @@ handle_call(_Request, _From, State = #server_state{}) ->
   {noreply, NewState :: #server_state{}} |
   {noreply, NewState :: #server_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #server_state{}}).
+
+%% @doc handling the data storing event, transferred from master (distributor)
 handle_cast({store, Data}, State = #server_state{}) ->
   N = atom_to_list(node()),
   Node = string:sub_string(N, 1, string:cspan(N, "@")),
@@ -172,3 +174,9 @@ keyVal([H | T]) ->
     reviews_from_critics = element(22, H)},
   ets:insert(moviesdb, {Id, Details}),
   keyVal(T).
+
+%% sendMapreduce - a process will be created to handle the mapreduce job
+sendMapreduce(Query = #query{}, Table_name, FromPID) ->
+  Result = mapreduce:get(Table_name, Query),
+  io:format("Got the answer at ~p, sending it to ~p~n", [self(),FromPID]),
+  FromPID ! Result.
