@@ -12,8 +12,7 @@
 -behaviour(gen_server).
 
 %% API
-%TODO: uncomment this
--compile(export_all).
+
 -export([start_link/0]).
 
 %% gen_server callbacks
@@ -85,6 +84,7 @@ handle_call(Query = #query{}, _From, State = #server_state{}) ->
 %% all other queries won't be replied
 handle_call(_Request, _From, State = #server_state{}) ->
   {reply, ok, State}.
+
 
 %% @private
 %% @doc Handling cast messages

@@ -45,10 +45,14 @@ sendData(_CSV, [], {_, _, _}) ->
   io:format("Sent all data...");
 
 sendData(CSV, [Sx | Servers], {Start, NumRows, Jump}) ->
-  NextStart = Start + Jump,
+  if
+    Start + Jump < NumRows -> NextStart = Start + Jump;
+    true -> NextStart = NumRows + 2
+  end,
+
   % spawning a sender process
   spawn(dataDistributor, sendServerJob, [lists:sublist(CSV, Start, Jump), Sx]),
-  io:format("send to ~p, lines ~p to ~p.~n", [Sx, Start, min(NextStart - 1, NumRows)]),
+  io:format("send to ~p, lines ~p to ~p.~n", [Sx, Start, NextStart - 1]),
   sendData(CSV, Servers, {NextStart, NumRows, Jump}).
 
 

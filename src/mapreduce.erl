@@ -43,11 +43,19 @@ get(TableName, Query = #query{}) ->
 map(Table, Query = #query{type = generic}) ->
   TupleList =
     case Query#query.searchCategory of
-      "Title" -> ets:match_object(Table, {'$0', #movie_data{title = Query#query.searchVal, _='_'}});
-      "Year" -> ets:match_object(Table, {'$0', #movie_data{year = Query#query.searchVal, _='_'}});
+      "Title" -> ets:select(Table,
+        [{{'_', #movie_data{title = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
+          [],
+          ['$_'] }]) ++
+        ets:select(Table,
+          [{{'_', #movie_data{title = Query#query.searchVal ++ '_', _ = '_'}},
+            [],
+            ['$_'] }]);
+      "Year" -> ets:match_object(Table,
+        {'$0', #movie_data{year = Query#query.searchVal, _ = '_'}});
       _ -> none
     end,
-  List = [X || {'$0', X} <- TupleList];
+  List = lists:usort([X || {_, X} <- TupleList]);
 
 % OTHER map - ????
 map(Table, Query = #query{}) ->
