@@ -17,7 +17,7 @@
   parent,
   config
 }).
--record(query,{type, searchVal, searchCategory, resultCategory}).
+-record(query, {type, searchVal, searchCategory, resultCategory}).
 
 
 %% Will get the pid of server
@@ -131,15 +131,25 @@ handle_click_event(A = #wx{}, _B) ->
     searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)),
     resultCategory = wxComboBox:getValue(ComboBox)},
   [MasterNode | _T] = readfile(["clientslist.txt"]),
-  Reply = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
-  Window2 = wxWindow:new(),
-  Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
-  wxStaticText:new(Frame2, ?wxID_ANY, lists:concat(Reply)),
-  wxFrame:show(Frame2),
-  wxWindow:show(Window2).
+  _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
+  receive %%TODO need to change _Reply to the right pattern of the data that is received
+    _Reply -> Window2 = wxWindow:new(),
+      Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
+      %wxStaticText:new(Frame2, ?wxID_ANY, lists:concat(Reply)),
+      wxStaticText:new(Frame2, ?wxID_ANY, "TODO"),
+      wxFrame:show(Frame2),
+      wxWindow:show(Window2);
+    _ -> Window2 = wxWindow:new(),
+      Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
+      wxStaticText:new(Frame2, ?wxID_ANY, "Reply"),
+      wxFrame:show(Frame2),
+      wxWindow:show(Window2)
+  end.
 
 %% readfile - read file as strings separated by lines
 readfile(FileName) ->
   {ok, Binary} = file:read_file(FileName),
   string:tokens(erlang:binary_to_list(Binary), "\r\n").
+
+
 
