@@ -1,10 +1,4 @@
 /.idea
 /src/*.beam
-/src/ex2_312538580.erl
-/src/ex3_312538580.erl
-/src/ex4_312538580.erl
-/src/ex5_312538580.erl
-/src/ex6_312538580.erl
-/src/ex7_312538580.erl
-/src/ex8_312538580.erl
-/src/ex9_312538580.erl
+/src/ex*.erl
+/src/table*

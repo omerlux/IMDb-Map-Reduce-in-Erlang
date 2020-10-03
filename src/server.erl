@@ -22,7 +22,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(server_state, {table = none}).
+-record(server_state, {table_name = none}).
 
 -record(movie_data, {id, title, original_title, year,
   date_published, genre, duration, country, language, director,
@@ -75,12 +75,12 @@ init([]) ->
   {stop, Reason :: term(), NewState :: #server_state{}}).
 %% a test query to get info
 handle_call(test, _From, State = #server_state{}) ->
-  Details = ets:tab2list(State#server_state.table),
+  Details = ets:tab2list(State#server_state.table_name),
   {reply, Details, State};
 %% #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
 handle_call(Query = #query{}, _From, State = #server_state{}) ->
-  % ets table is 'Table'
-  Return = mapreduce:map(State#server_state.table, Query),
+  %TODO: make it a seperate process
+  Return = mapreduce:get(State#server_state.table_name, Query),
   {reply, Return, State};  % Return is the reply
 %% all other queries won't be replied
 handle_call(_Request, _From, State = #server_state{}) ->
@@ -96,10 +96,10 @@ handle_cast({store, Data}, State = #server_state{}) ->
   N = atom_to_list(node()),
   Node = string:sub_string(N, 1, string:cspan(N, "@")),
   io:format(Node ++ " received data. Saving...~n"),
-  Table = saveData(Data),
-  %TODO: add timestamp for sending the data
-  io:format("Done!~n"),
-  {noreply, State#server_state{table = Table}};
+  Start = os:timestamp(),
+  TableFile = saveData(Data),
+  io:format("Done in ~p ms.~n",[timer:now_diff(os:timestamp(), Start) / 1000]),
+  {noreply, State#server_state{table_name = TableFile}};
 handle_cast(_Request, State = #server_state{}) ->
   {noreply, State}.
 
@@ -136,9 +136,11 @@ code_change(_OldVsn, State = #server_state{}, _Extra) ->
 
 %% saveData - saving data into ets
 saveData(Data) ->
-  Table = ets:new(moviesdb, [set, named_table, {read_concurrency, true}]),
+  Table = ets:new(moviesdb, [set, public, named_table, {read_concurrency, true}]),
   keyVal(Data),
-  Table.
+  ets:tab2file(moviesdb, "table_" ++ atom_to_list(node())),
+  ets:delete(Table),
+  "table_" ++ atom_to_list(node()).
 
 %% keyVal - creates list of {key, value} for ets insertion
 keyVal([]) ->
@@ -146,6 +148,7 @@ keyVal([]) ->
 keyVal([H | T]) ->
   Id = element(1, H),
   Details = #movie_data{
+    id = element(1, H),
     title = element(2, H),
     original_title = element(3, H),
     year = element(4, H),
