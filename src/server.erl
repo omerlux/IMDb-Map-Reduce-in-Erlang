@@ -78,6 +78,8 @@ handle_call(test, _From, State = #server_state{}) ->
   {reply, Details, State};
 %% #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
 handle_call(Query = #query{}, {FromPID, _Tag}, State = #server_state{}) ->
+  %%TODO: comment for testing, and change reply from 'ok'
+  %%{reply, mapreduce:get(State#server_state.table_name, Query), State};
   PID = spawn(fun() -> sendMapreduce(Query, State#server_state.table_name, FromPID) end),
   io:format("Received map-reduce query from ~p, created PID ~p~n",[FromPID,PID]),
   {reply, ok, State};  % reply is ok, pid will return the answer...
