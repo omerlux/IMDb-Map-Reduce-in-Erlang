@@ -79,10 +79,10 @@ handle_call(test, _From, State = #server_state{}) ->
 %% #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
 handle_call(Query = #query{}, {FromPID, _Tag}, State = #server_state{}) ->
   %%TODO: comment for testing, and change reply from 'ok'
-  %%{reply, mapreduce:get(State#server_state.table_name, Query), State};
-  PID = spawn(fun() -> sendMapreduce(Query, State#server_state.table_name, FromPID) end),
-  io:format("Received map-reduce query from ~p, created PID ~p~n",[FromPID,PID]),
-  {reply, ok, State};  % reply is ok, pid will return the answer...
+  {reply, mapreduce:get(State#server_state.table_name, Query), State};
+%%  PID = spawn(fun() -> sendMapreduce(Query, State#server_state.table_name, FromPID) end),
+%%  io:format("Received map-reduce query from ~p, created PID ~p~n",[FromPID,PID]),
+%%  {reply, ok, State};  % reply is ok, pid will return the answer...
 %% all other queries won't be replied
 handle_call(_Request, _From, State = #server_state{}) ->
   {reply, ok, State}.
@@ -179,6 +179,8 @@ keyVal([H | T]) ->
 
 %% sendMapreduce - a process will be created to handle the mapreduce job
 sendMapreduce(Query = #query{}, Table_name, FromPID) ->
+  Start = os:timestamp(),
   Result = mapreduce:get(Table_name, Query),
-  io:format("Got the answer at ~p, sending it to ~p~n", [self(),FromPID]),
+  io:format("Got the answer at ~p in ~p ms, sending it to ~p~n",
+    [self(), (timer:now_diff(os:timestamp(), Start) / 1000),FromPID]),
   FromPID ! Result.

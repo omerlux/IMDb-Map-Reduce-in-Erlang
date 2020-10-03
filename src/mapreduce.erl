@@ -43,7 +43,7 @@ get(TableName, Query = #query{}) ->
 map(Table, Query = #query{type = generic}) ->
   TupleList =
     case Query#query.searchCategory of
-
+      %% TODO: fix things like : "Drama" genere search won't return "Action, Drama" generes....
       "Title" -> ets:select(Table,
         [{{'_', #movie_data{title = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
           [],

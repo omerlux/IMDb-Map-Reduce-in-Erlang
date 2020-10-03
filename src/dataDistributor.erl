@@ -10,8 +10,6 @@
 -author("Ilay-Omer").
 
 %% API
-%TODO: uncomment this
--compile(export_all).
 -export([distribute/0]).
 
 
@@ -49,9 +47,8 @@ sendData(CSV, [Sx | Servers], {Start, NumRows, Jump}) ->
     Start + Jump < NumRows -> NextStart = Start + Jump;
     true -> NextStart = NumRows + 2
   end,
-
   % spawning a sender process
-  spawn(dataDistributor, sendServerJob, [lists:sublist(CSV, Start, Jump), Sx]),
+  spawn(fun() -> sendServerJob(lists:sublist(CSV, Start, Jump), Sx) end),
   io:format("send to ~p, lines ~p to ~p.~n", [Sx, Start, NextStart - 1]),
   sendData(CSV, Servers, {NextStart, NumRows, Jump}).
 
