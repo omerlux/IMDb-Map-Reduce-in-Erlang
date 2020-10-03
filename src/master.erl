@@ -69,7 +69,7 @@ init([]) ->
 
 handle_call(Query = #query{}, {FromPID, _Tag}, State = #master_state{}) ->
   PID = spawn(fun() -> sendQuery(Query, FromPID) end),
-  io:format("Received query from ~p, created PID ~p~n",[FromPID,PID]),
+  io:format("Received query from ~p, created PID ~p~n", [FromPID, PID]),
   {reply, ok, State}.
 
 %% @private
@@ -117,7 +117,7 @@ sendQuery(Query = #query{}, FromPID) ->
   Servers = readfile(["serverslist.txt"]),
   NumberOfServers = countList(Servers),
   Result = sendQuery(Query, Servers, NumberOfServers),
-  io:format("Received final result *** ~p *** at ~p, sending it to ~p~n", [Result,self(),FromPID]),
+  io:format("Received final result *** ~p *** at ~p, sending it to ~p~n", [Result, self(), FromPID]),
   FromPID ! Result.
 
 sendQuery(_Query = #query{}, [], NumberOfServers) ->
@@ -126,28 +126,29 @@ sendQuery(_Query = #query{}, [], NumberOfServers) ->
 sendQuery(Query = #query{}, [Server0 | T], _NumberOfServers) ->
   Self = self(),
   PID = spawn(fun() -> sendServerJob(Self, Query, Server0) end),
-  io:format("Entered sendQuery function and ~p spawned process ~p for server ~p~n", [self(), PID ,Server0]),
+  io:format("Entered sendQuery function and ~p spawned process ~p for server ~p~n", [self(), PID, Server0]),
   sendQuery(Query, T, _NumberOfServers).
 
 sendServerJob(ParentPID, Query = #query{}, Server) ->
-  %%TODO need to uncomment the receive block and change Reply to Reply2 inside when @Omer finish the server
   ServerNode = list_to_atom(Server),
   % sending from gen_server the values of the data
-  Reply = gen_server:call({serverpid, ServerNode}, Query), %%note: comment for testing
-  % Reply = fiboR(41), %%note: for testing
-%%  receive
-%%    Reply2 ->  io:format("sendServerJob function of server ~p entered receive block and sending to ~p~n",[Server,ParentPID]),
-             ParentPID ! Reply,
-%%  end,
-  %% ParentPID ! Reply,
-  io:format("sendServerJob function of server ~p sent a reply to ~p~n",[Server,ParentPID]).
+  gen_server:call({serverpid, ServerNode}, Query),
+  receive
+    table_error ->
+      io:format("Server ~p returned table_error~n", [Server]);
+    Reply2 ->
+      io:format("sendServerJob function of server ~p entered receive block and sending to ~p~n", [Server, ParentPID]),
+      ParentPID ! Reply2
+  end,
+  io:format("sendServerJob function of server ~p sent a reply to ~p~n", [Server, ParentPID]).
 
 gather(0) -> [];
 gather(ExpectedResults) ->
   io:format("Entered gather function expecting ~p results ~n", [ExpectedResults]),
   receive
-    Result ->   io:format("Received result ~p at ~p~n", [Result,self()]),
-                [Result | gather(ExpectedResults - 1)]
+    Result ->
+      io:format("Received result ~p at ~p~n", [Result, self()]),
+      Result ++ gather(ExpectedResults - 1)
   end.
 
 %% readfile - read file as strings separated by lines

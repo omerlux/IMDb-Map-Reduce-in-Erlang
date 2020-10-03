@@ -17,7 +17,18 @@
   parent,
   config
 }).
+-record(movie_data, {id, title, original_title, year,
+  date_published, genre, duration, country, language, director,
+  writer, production_company, actors, description, avg_vote,
+  votes, budget, usa_gross_income, worlwide_gross_income,
+  metascore, reviews_from_users, reviews_from_critics}).
 -record(query, {type, searchVal, searchCategory, resultCategory}).
+
+%% note======================================= TODO: =============================================
+%% 1. Mention that the search is case sensitive
+%% 2. Add the number of result for every query, not related to the "Nubmer of results" option
+%% 3. Showing the data on the Grid?
+%% note===========================================================================================
 
 
 %% Will get the pid of server
@@ -42,7 +53,7 @@ start() ->
 
 
   Choices = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
-  Choices2 = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget", "Number of results"],
+  Choices2 = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget", "Number of results", "All"],
 
   %% Create a wxListBox that uses multiple selection
   ListBox = wxListBox:new(Frame, 1, [{size, {-1, 100}},
@@ -132,14 +143,16 @@ handle_click_event(A = #wx{}, _B) ->
     resultCategory = wxComboBox:getValue(ComboBox)},
   [MasterNode | _T] = readfile(["clientslist.txt"]),
   _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
-  receive %%TODO need to change _Reply to the right pattern of the data that is received
-    _Reply -> Window2 = wxWindow:new(),
+  receive
+    Movies when is_list(Movies) ->
+      Window2 = wxWindow:new(),
       Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
-      %wxStaticText:new(Frame2, ?wxID_ANY, lists:concat(Reply)),
-      wxStaticText:new(Frame2, ?wxID_ANY, "TODO"),
+      wxStaticText:new(Frame2, ?wxID_ANY, data2Text(Movies)),
       wxFrame:show(Frame2),
+      wxWindow:setScrollbar(Window2, 1, 0, 16, 50),
       wxWindow:show(Window2);
-    _ -> Window2 = wxWindow:new(),
+    _ ->
+      Window2 = wxWindow:new(),
       Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
       wxStaticText:new(Frame2, ?wxID_ANY, "Reply"),
       wxFrame:show(Frame2),
@@ -150,6 +163,25 @@ handle_click_event(A = #wx{}, _B) ->
 readfile(FileName) ->
   {ok, Binary} = file:read_file(FileName),
   string:tokens(erlang:binary_to_list(Binary), "\r\n").
+
+data2Text([MovieTuple = #movie_data{} | T]) ->
+  Movie2Text =
+    "Title: " ++ MovieTuple#movie_data.title
+    ++ "\nYear: " ++ MovieTuple#movie_data.year
+    ++ "\nGenre: " ++ MovieTuple#movie_data.genre
+    ++ "\nDuration: " ++ MovieTuple#movie_data.duration
+    ++ "\nCountry: " ++ MovieTuple#movie_data.country
+    ++ "\nLanguage:" ++ MovieTuple#movie_data.language
+    ++ "\nDirector: " ++ MovieTuple#movie_data.director
+    ++ "\nWriter: " ++ MovieTuple#movie_data.writer
+    ++ "\nProduction: " ++ MovieTuple#movie_data.production_company
+    ++ "\nActors: " ++ MovieTuple#movie_data.actors
+    ++ "\nDescription: " ++ MovieTuple#movie_data.description
+    ++ "\nBudget: " ++ MovieTuple#movie_data.budget,
+  Movie2Text ++ "\n" ++ "\n" ++ data2Text(T);
+
+data2Text([]) -> [];
+data2Text(_) -> null.
 
 
 
