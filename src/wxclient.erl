@@ -12,6 +12,8 @@
 %% API
 -export([start/0, readfile/1]).
 -include_lib("wx/include/wx.hrl").
+-record(numOfResults,{number}).
+-record(reduced_data,{id, title, categoryInfo}).
 -record(state,
 {
   parent,
@@ -41,28 +43,20 @@ start() ->
   MainSizer = wxBoxSizer:new(?wxVERTICAL),
   SubSizer1 = wxBoxSizer:new(?wxVERTICAL),
   SubSizer2 = wxBoxSizer:new(?wxVERTICAL),
-  GridSizer = wxGridSizer:new(?wxVERTICAL),
-
   TopTxt = wxStaticText:new(Frame, ?wxID_ANY, "Query Window"),
   Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value:"),
   TextCtrl = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
   wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here"),
-  Grid = create_grid(Frame),
   ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
   wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
-
-
   Choices = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
   Choices2 = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget", "Number of results", "All"],
-
   %% Create a wxListBox that uses multiple selection
   ListBox = wxListBox:new(Frame, 1, [{size, {-1, 100}},
     {choices, Choices}, {style, ?wxLB_SINGLE}]),
   wxListBox:setToolTip(ListBox, "Choose your search value category"),
-
   ComboBox = wxComboBox:new(Frame, 5, [{choices, Choices2}]),
   wxComboBox:setToolTip(ComboBox, "Choose the category your interested in from the results"),
-
   wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
     {userData, {wx:get_env(), TextCtrl, ListBox, ComboBox}}]),
 
@@ -73,20 +67,54 @@ start() ->
   wxSizer:add(SubSizer1, ListBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ComboBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
-  wxSizer:add(GridSizer, Grid, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),%%TODO hide it at startup?
-
+%%  wxSizer:add(GridSizer, Grid, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),%%TODO hide it at startup?
   Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL, [{underlined, true}]),
   wxTextCtrl:setFont(TopTxt, Font),
   wxSizer:add(MainSizer, SubSizer1, [{flag, ?wxALIGN_LEFT}, {border, 5}]),
   wxSizer:add(MainSizer, SubSizer2, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
-  wxSizer:add(SubSizer2, GridSizer, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
-  wxSizer:hide(SubSizer2, GridSizer, [{recursive, true}]),
-
   wxWindow:setSizer(Frame, MainSizer),
   wxFrame:show(Frame).
 
+handle_click_event(A = #wx{}, _B) ->
+  {Env, TextBox, ListBox, ComboBox} = A#wx.userData,
+  wx:set_env(Env),
+  Query = #query{type = generic,
+    searchVal = wxTextCtrl:getValue(TextBox),
+    searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)),
+    resultCategory = wxComboBox:getValue(ComboBox)},
+  %%[MasterNode | _T] = readfile(["clientslist.txt"]), %%TODO had a problem reading the file...
+  MasterNode = "master@DESKTOP-3NPJUSA",
+  _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
+  receive
+    %% ************* Handling Query Results: *******************
+    Movies when is_list(Movies) ->
+      Window2 = wxWindow:new(),
+      Frame = wxFrame:new(Window2, ?wxID_ANY, "Results"),
+      wxFrame:center(Frame),
+      Panel = wxPanel:new(Frame, []),
+      %% Setup sizers:
+      MainSizer = wxBoxSizer:new(?wxVERTICAL),
+      Label = "For query: Search value: "++Query#query.searchVal++" | Value category: "++Query#query.searchCategory
+        ++" | Information required: "++Query#query.resultCategory,
+      Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
+      Grid = create_grid(Panel,Movies),
+      %% Add to sizers:
+      Options = [{flag, ?wxEXPAND}, {proportion, 1}],
+      wxSizer:add(Sizer, Grid, Options),
+      wxSizer:add(MainSizer, Sizer, Options),
+      wxPanel:setSizer(Panel, MainSizer),
+      wxFrame:show(Frame),
+      wxWindow:show(Window2);
+  %% ************************************************************
+    _ ->
+      Window2 = wxWindow:new(),
+      Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
+      wxStaticText:new(Frame2, ?wxID_ANY, "Reply"),
+      wxFrame:show(Frame2),
+      wxWindow:show(Window2)
+  end.
 
-create_grid(Panel) ->
+create_grid(Panel,Movies) ->
   %% Create the grid with 100 * 5 cells
   Grid = wxGrid:new(Panel, 2, []),
   wxGrid:createGrid(Grid, 100, 5),
@@ -97,7 +125,7 @@ create_grid(Panel) ->
   %% Fun to set the values and flags of the cells
   Fun =
     fun(Row) ->
-      wxGrid:setCellValue(Grid, Row, 0, "Editable"),
+      wxGrid:setCellValue(Grid, Row, 0, "blabla"),
       wxGrid:setCellValue(Grid, Row, 1, "Editable"),
       wxGrid:setCellValue(Grid, Row, 2, "Editable"),
       wxGrid:setCellValue(Grid, Row, 3, "Read only"),
@@ -131,39 +159,19 @@ create_grid(Panel) ->
   %% Apply the fun to each row
   wx:foreach(Fun, lists:seq(0, 99)),
   wxGrid:setColSize(Grid, 2, 150),
-  wxGrid:connect(Grid, grid_cell_change),
+  %%wxGrid:connect(Grid, grid_cell_change),
   Grid.
 
-handle_click_event(A = #wx{}, _B) ->
-  {Env, TextBox, ListBox, ComboBox} = A#wx.userData,
-  wx:set_env(Env),
-  Query = #query{type = generic,
-    searchVal = wxTextCtrl:getValue(TextBox),
-    searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)),
-    resultCategory = wxComboBox:getValue(ComboBox)},
-  [MasterNode | _T] = readfile(["clientslist.txt"]),
-  _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
-  receive
-    Movies when is_list(Movies) ->
-      Window2 = wxWindow:new(),
-      Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
-      wxStaticText:new(Frame2, ?wxID_ANY, data2Text(Movies)),
-      wxFrame:show(Frame2),
-      wxWindow:setScrollbar(Window2, 1, 0, 16, 50),
-      wxWindow:show(Window2);
-    _ ->
-      Window2 = wxWindow:new(),
-      Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Popup"),
-      wxStaticText:new(Frame2, ?wxID_ANY, "Reply"),
-      wxFrame:show(Frame2),
-      wxWindow:show(Window2)
-  end.
-
-%% readfile - read file as strings separated by lines
-readfile(FileName) ->
+%% readfile - read file as strings separated by lin9wes
+readfile(FileName) -> %%TODO need to handle errors - when file:read_file returns {error,Reason}
+%%  try
   {ok, Binary} = file:read_file(FileName),
   string:tokens(erlang:binary_to_list(Binary), "\r\n").
+%%catch
+%%error: Error -> {os:system_time(), error, Error}
+%%end.
 
+data2Text([]) -> [];
 data2Text([MovieTuple = #movie_data{} | T]) ->
   Movie2Text =
     "Title: " ++ MovieTuple#movie_data.title
@@ -179,9 +187,10 @@ data2Text([MovieTuple = #movie_data{} | T]) ->
     ++ "\nDescription: " ++ MovieTuple#movie_data.description
     ++ "\nBudget: " ++ MovieTuple#movie_data.budget,
   Movie2Text ++ "\n" ++ "\n" ++ data2Text(T);
-
-data2Text([]) -> [];
 data2Text(_) -> null.
+
+
+
 
 
 
