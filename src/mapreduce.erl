@@ -22,6 +22,9 @@
   writer, production_company, actors, description, avg_vote,
   votes, budget, usa_gross_income, worlwide_gross_income,
   metascore, reviews_from_users, reviews_from_critics}).
+-record(numOfResults, {number}).
+-record(reduced_data, {id, title, categoryInfo}).
+
 
 %% API
 -export([get/2]).
@@ -86,20 +89,32 @@ map(_Table, _Query = #query{}) ->
 reduce(MappedList, Query = #query{type = generic}) ->
   case Query#query.resultCategory of
     "All" -> MappedList;
-    "Title" -> [X || #movie_data{title = X} <- MappedList];
-    "Year" -> [X || #movie_data{year = X} <- MappedList];
-    "Genre" -> [X || #movie_data{genre = X} <- MappedList];
-    "Duration" -> [X || #movie_data{duration = X} <- MappedList];
-    "Country" -> [X || #movie_data{country = X} <- MappedList];
-    "Language" -> [X || #movie_data{language = X} <- MappedList];
-    "Director" -> [X || #movie_data{duration = X} <- MappedList];
-    "Writer" -> [X || #movie_data{writer = X} <- MappedList];
-    "Production Company" -> [X || #movie_data{production_company = X} <- MappedList];
-    "Actor" -> [X || #movie_data{actors = X} <- MappedList];
-    "Description" -> [X || #movie_data{description = X} <- MappedList];
-    "Score" -> [X || #movie_data{metascore = X} <- MappedList];
-    "Budget" -> [X || #movie_data{budget = X} <- MappedList];
-    "Number of results" -> countList(MappedList)
+    "Title" -> [#reduced_data{id = X, title = Y, categoryInfo = Y} || #movie_data{id = X, title = Y} <- MappedList];
+    "Year" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, year = Z} <- MappedList];
+    "Genre" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, genre = Z} <- MappedList];
+    "Duration" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, duration = Z} <- MappedList];
+    "Country" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, country = Z} <- MappedList];
+    "Language" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, language = Z} <- MappedList];
+    "Director" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, director = Z} <- MappedList];
+    "Writer" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, writer = Z} <- MappedList];
+    "Production Company" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, production_company = Z} <- MappedList];
+    "Actor" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, actors = Z} <- MappedList];
+    "Description" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, description = Z} <- MappedList];
+    "Score" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, metascore = Z} <- MappedList];
+    "Budget" ->
+      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, budget = Z} <- MappedList];
+    "Number of results" -> #numOfResults{number = countList(MappedList)}
   end.
 
 %% countList - returning the number of string elements in the list
