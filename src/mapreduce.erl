@@ -40,132 +40,40 @@ get(TableName, Query = #query{}) ->
 
 %% map -
 % generic map - searching searchVal in searchCategory.
-map(Table, Query = #query{type = generic}) ->
-  TupleList =
+map(Table, Query = #query{type = generic, searchVal = SearchVal}) ->
+  reduce(
     case Query#query.searchCategory of
-      %% TODO: fix things like : "Drama" genere search won't return "Action, Drama" generes....
-      "Title" -> ets:select(Table,
-        [{{'_', #movie_data{title = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{title = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Year" -> ets:match_object(Table,
-        {'$0', #movie_data{year = Query#query.searchVal, _ = '_'}});
-
-      "Genre" -> ets:select(Table,
-        [{{'_', #movie_data{genre = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{genre = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
+      "Title" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.title, SearchVal) > 0];
+      "Year" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), Movie#movie_data.year == SearchVal];
+      "Genre" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.genre, SearchVal) > 0];
       % note: try that... (range of +-5)
-      "Duration" ->
-        {Int, _} = string:to_integer(Query#query.searchVal),
-        Int1 = integer_to_list(Int - 4), Int2 = integer_to_list(Int - 3), Int3 = integer_to_list(Int - 2),
-        Int4 = integer_to_list(Int - 1),
-        Int5 = integer_to_list(Int + 1), Int6 = integer_to_list(Int + 2), Int7 = integer_to_list(Int + 3),
-        Int8 = integer_to_list(Int + 4),
-        ets:match_object(Table, {'$0', #movie_data{duration = Int, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int1, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int2, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int3, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int4, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int5, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int6, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int7, _ = '_'}}) ++
-          ets:match_object(Table, {'$0', #movie_data{duration = Int8, _ = '_'}});
-
-      "Country" -> ets:select(Table,
-        [{{'_', #movie_data{country = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{country = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Language" -> ets:select(Table,
-        [{{'_', #movie_data{language = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{language = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Director" -> ets:select(Table,
-        [{{'_', #movie_data{director = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{director = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Writer" -> ets:select(Table,
-        [{{'_', #movie_data{writer = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{writer = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Production Company" -> ets:select(Table,
-        [{{'_', #movie_data{production_company = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{production_company = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Actor" -> ets:select(Table,
-        [{{'_', #movie_data{actors = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{actors = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Description" -> ets:select(Table,
-        [{{'_', #movie_data{description = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{description = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Score" -> ets:select(Table,
-        [{{'_', #movie_data{metascore = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{metascore = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
-      "Budget" -> ets:select(Table,
-        [{{'_', #movie_data{budget = ['_' | Query#query.searchVal] ++ '_', _ = '_'}},
-          [],
-          ['$_']}]) ++
-      ets:select(Table,
-        [{{'_', #movie_data{budget = Query#query.searchVal ++ '_', _ = '_'}},
-          [],
-          ['$_']}]);
-
+      "Duration" -> [Movie || {_id, Movie} <- ets:tab2list(Table),
+        list_to_integer(Movie#movie_data.duration) > list_to_integer(SearchVal) - 5,
+        list_to_integer(Movie#movie_data.duration) < list_to_integer(SearchVal) + 5];
+      "Country" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.country, SearchVal) > 0];
+      "Language" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.language, SearchVal) > 0];
+      "Director" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.director, SearchVal) > 0];
+      "Writer" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.writer, SearchVal) > 0];
+      "Production Company" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.production_company, SearchVal) > 0];
+      "Actor" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.actors, SearchVal) > 0];
+      "Description" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.description, SearchVal) > 0];
+      "Score" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.title, SearchVal) > 0];
+      "Budget" ->
+        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.budget, SearchVal) > 0];
       _ -> []
-    end,
-  reduce(lists:usort([X || {_, X} <- TupleList]), Query);
+    end, Query);
+
 
 % OTHER map - ????
 map(_Table, _Query = #query{}) ->
