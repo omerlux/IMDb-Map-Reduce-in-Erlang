@@ -50,6 +50,7 @@ start_link() ->
   {ok, Pid} = gen_server:start_link({global, node()}, ?MODULE, [], []),
   register(serverpid, Pid).
 
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -60,6 +61,8 @@ start_link() ->
   {ok, State :: #server_state{}} | {ok, State :: #server_state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
+  [MasterNode| _Clients] = readfile(["clientslist.txt"]),
+  gen_server:cast({masterpid, list_to_atom(MasterNode)}, {nodeup, node()}),
   {ok, #server_state{}}.
 
 %% @private
@@ -72,18 +75,18 @@ init([]) ->
   {noreply, NewState :: #server_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #server_state{}} |
   {stop, Reason :: term(), NewState :: #server_state{}}).
-%% a test query to get info
+%% Handle_call - a test query to get info
 handle_call(test, _From, State = #server_state{}) ->
   Details = ets:tab2list(State#server_state.table_name),
   {reply, Details, State};
-%% #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
+%% Handle_call - #generic query - get all the (column = filed2) of the map function - contains(field1 = text)
 handle_call(Query = #query{}, {FromPID, _Tag}, State = #server_state{}) ->
 %%  %%TODO: comment for testing, and change reply from 'ok'
 %%  {reply, mapreduce:get(State#server_state.table_name, Query), State};
   PID = spawn(fun() -> sendMapreduce(Query, State#server_state.table_name, FromPID) end),
   io:format("Received map-reduce query from ~p, created PID ~p~n",[FromPID,PID]),
   {reply, ok, State};  % reply is ok, pid will return the answer...
-%% all other queries won't be replied
+%% Handle_call - all other queries won't be replied
 handle_call(_Request, _From, State = #server_state{}) ->
   {reply, ok, State}.
 
@@ -102,7 +105,7 @@ handle_cast({store, Data}, State = #server_state{}) ->
   io:format(Node ++ " received data. Saving...~n"),
   Start = os:timestamp(),
   TableFile = saveData(Data),
-  io:format("Done in ~p ms.~n",[timer:now_diff(os:timestamp(), Start) / 1000]),
+  io:format("Done in ~p ms.~n",[round(timer:now_diff(os:timestamp(), Start) / 1000)]),
   {noreply, State#server_state{table_name = TableFile}};
 handle_cast(_Request, State = #server_state{}) ->
   {noreply, State}.
@@ -182,5 +185,10 @@ sendMapreduce(Query = #query{}, Table_name, FromPID) ->
   Start = os:timestamp(),
   Result = mapreduce:get(Table_name, Query),
   io:format("Got the answer at ~p in ~p ms, sending it to ~p~n",
-    [self(), (timer:now_diff(os:timestamp(), Start) / 1000),FromPID]),
+    [self(), round(timer:now_diff(os:timestamp(), Start) / 1000),FromPID]),
   FromPID ! Result.
+
+%% readfile - read file as strings separated by lines
+readfile(FileName) ->
+  {ok, Binary} = file:read_file(FileName),
+  string:tokens(erlang:binary_to_list(Binary), "\r\n").

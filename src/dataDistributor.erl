@@ -10,17 +10,22 @@
 -author("Ilay-Omer").
 
 %% API
--export([distribute/0]).
+-export([distribute/0, readfile/1]).
 
 
 %% distribute - distributing the CSV file rows to each server.
 %% NOTE: for now, there aren't any duplicated data..
 distribute() ->
+  Start = os:timestamp(),
   CSV = parse_csv:main(["../csvexample.csv"]),
   NumRows = lists:flatlength(CSV) - 1,
-  Servers = readfile(["serverslist.txt"]),
-  NumServers = countList(Servers),
-  sendData(CSV, Servers, {2, NumRows, ceil(NumRows / NumServers)}). % {start, stop, jump}
+  Servers = checkAlive(readfile(["serverslist.txt"]), []),
+  NumServers = lists:flatlength(Servers),
+  case NumServers>0 of
+    true -> sendData(CSV, Servers, {2, NumRows, ceil(NumRows / NumServers)}), % {start, stop, jump}
+      io:format("Sent ~p movie records to ~p servers in ~p ms.~n", [NumRows, NumServers, round(timer:now_diff(os:timestamp(), Start) / 1000)]);
+    false -> io:format("No servers available...~n")
+  end.
 
 
 %% readfile - read file as strings separated by lines
@@ -29,18 +34,18 @@ readfile(FileName) ->
   string:tokens(erlang:binary_to_list(Binary), "\r\n").
 
 
-%% countList - returning the number of string elements in the list
-countList([_ | T]) ->
-  count(1, T).
-count(X, [_ | T]) ->
-  count(X + 1, T);
-count(X, []) ->
-  X.
+%%%% countList - returning the number of string elements in the list
+%%countList([_ | T]) ->
+%%  count(1, T).
+%%count(X, [_ | T]) ->
+%%  count(X + 1, T);
+%%count(X, []) ->
+%%  X.
 
 
 %% sendData - sending data to all servers
 sendData(_CSV, [], {_, _, _}) ->
-  io:format("Sent all data...");
+  ok;
 
 sendData(CSV, [Sx | Servers], {Start, NumRows, Jump}) ->
   if
@@ -54,13 +59,17 @@ sendData(CSV, [Sx | Servers], {Start, NumRows, Jump}) ->
 
 
 %% sendServerJob - sending server x the data it needs
-sendServerJob(CSV_Partition, Server) ->
-  ServerNode = list_to_atom(Server),
+sendServerJob(CSV_Partition, ServerNode) ->
   % sending from gen_server the values of the data
   gen_server:cast({serverpid, ServerNode}, {store, CSV_Partition}).
 
-%% serverPidGetter - returning the pid of the server to connect to.
-%%serverPidGetter(Server) ->
-%%  list_to_atom(
-%%    string:sub_string(Server, 1, string:cspan(Server, "@")) ++ "pid"
-%%  ).
+
+%% checkAlive - check each server if alive. Returns a list of server nodes which are alive
+checkAlive([S0 | Servers], Nodes) ->
+  Node = list_to_atom(S0),
+  case net_kernel:connect_node(Node) of
+    true -> % erlang:monitor_node(Node, true),    % monitoring the node!
+      checkAlive(Servers, [Node | Nodes]);
+    false -> checkAlive(Servers, Nodes)
+  end;
+checkAlive([], Servers) -> Servers.

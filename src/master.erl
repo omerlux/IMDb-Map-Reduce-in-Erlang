@@ -16,7 +16,7 @@
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2, terminate/2,
-  code_change/3, fiboT/1, fiboR/1]).
+  code_change/3]).
 
 -define(SERVER, ?MODULE).
 
@@ -30,13 +30,10 @@
 -spec(start_link() ->
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
-  %%TODO add the distribution of the data to the servers
   {ok, Pid} = gen_server:start_link({global, node()}, ?MODULE, [], []),
-  register(masterpid, Pid).
-%% note:
-%% working...
-%% to connect with 'node' master, we need to use net_adm:ping('node'),
-%% then we can send gen_server:func({global, 'node'}, _Request)
+  register(masterpid, Pid),
+  % distributing the data to whom that is ready to receive.
+  dataDistributor:distribute().
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -48,6 +45,8 @@ start_link() ->
   {ok, State :: #master_state{}} | {ok, State :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term()} | ignore).
 init([]) ->
+  io:format("Master started.~n"),
+  net_kernel:monitor_nodes(true),
   {ok, #master_state{}}.
 
 %% @private
@@ -60,16 +59,13 @@ init([]) ->
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), Reply :: term(), NewState :: #master_state{}} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
-
-%%handle_call({query,generic,SearchVal,SearchCategory,ResultCategory}, _From, State = #master_state{}) ->
-%%
-%%  %%gen_server:reply(_From, ("Your Query is: Get "++ ResultCategory ++ " of all movies " ++ SearchCategory ++ "'s containing: " ++ SearchVal)),
-%%  Reply = ("Your Query is: Get "++ ResultCategory ++ " of all movies " ++ SearchCategory ++ "'s containing: " ++ SearchVal),
-%%  {reply, Reply, State};
-
+%% handle_call - query format answer
 handle_call(Query = #query{}, {FromPID, _Tag}, State = #master_state{}) ->
   PID = spawn(fun() -> sendQuery(Query, FromPID) end),
   io:format("Received query from ~p, created PID ~p~n", [FromPID, PID]),
+  {reply, ok, State};
+%% Handle_call - all other queries won't be replied
+handle_call(_Request, _From, State = #master_state{}) ->
   {reply, ok, State}.
 
 %% @private
@@ -78,8 +74,18 @@ handle_call(Query = #query{}, {FromPID, _Tag}, State = #master_state{}) ->
   {noreply, NewState :: #master_state{}} |
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
+%% Handle_cast - nodeup format answer
+handle_cast({nodeup, Node}, State = #master_state{}) ->
+  case lists:member(atom_to_list(Node), dataDistributor:readfile(["serverslist.txt"])) of
+    true -> %% note: no other request can be handled while distributing
+      io:format("A new node is up: ~p~n", [Node]),
+      dataDistributor:distribute();
+    false -> noupdate         % server isn't part of the distribution
+  end,
+  {noreply, State};
+%% Handle_cast - all other casted messages
 handle_cast(_Request, State = #master_state{}) ->
-  io:format("Message received: ~p", [_Request]),
+  io:format("Message received: ~p~n", [_Request]),
   {noreply, State}.
 
 %% @private
@@ -88,6 +94,12 @@ handle_cast(_Request, State = #master_state{}) ->
   {noreply, NewState :: #master_state{}} |
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
+%% Handle_info - {nodedown, Node} - distribute the data again because a node is down
+handle_info({nodedown, Node}, State = #master_state{}) ->
+  io:format("A node is down: ~p~n", [Node]),
+  dataDistributor:distribute(),
+  {noreply, State};
+%% Handle_info - all other requests
 handle_info(_Info, State = #master_state{}) ->
   {noreply, State}.
 
@@ -164,20 +176,20 @@ count(X, [_ | T]) ->
 count(X, []) ->
   X.
 
-%% Fibonacci recursions part:
-%% returns the N'th fibonacci number
-%% normal recursion:
-fiboR(1) -> 1;
-fiboR(2) -> 1;
-fiboR(N) -> fiboR(N - 1) + fiboR(N - 2).
-
-%% Tail recursion:
-fiboT(1) -> 1;
-fiboT(2) -> 1;
-fiboT(N) -> fiboTail(N, 1, 1).
-fiboTail(3, _Arg1, _Arg2) -> _Arg1 + _Arg2;
-fiboTail(N, _Arg1, _Arg2) -> fiboTail(N - 1, _Arg2, _Arg2 + _Arg1).
-
-%% The tail recursion runs much faster. as we saw in class, normal recursion requires a chain of resources during evaluation
-%% on the other hand, tail recursion transforms the linear process of recursion into iterative one,
-%% by “carrying” the partial answers along the way and it makes the whole process much faster.
+%%%% Fibonacci recursions part:
+%%%% returns the N'th fibonacci number
+%%%% normal recursion:
+%%fiboR(1) -> 1;
+%%fiboR(2) -> 1;
+%%fiboR(N) -> fiboR(N - 1) + fiboR(N - 2).
+%%
+%%%% Tail recursion:
+%%fiboT(1) -> 1;
+%%fiboT(2) -> 1;
+%%fiboT(N) -> fiboTail(N, 1, 1).
+%%fiboTail(3, _Arg1, _Arg2) -> _Arg1 + _Arg2;
+%%fiboTail(N, _Arg1, _Arg2) -> fiboTail(N - 1, _Arg2, _Arg2 + _Arg1).
+%%
+%%%% The tail recursion runs much faster. as we saw in class, normal recursion requires a chain of resources during evaluation
+%%%% on the other hand, tail recursion transforms the linear process of recursion into iterative one,
+%%%% by “carrying” the partial answers along the way and it makes the whole process much faster.
