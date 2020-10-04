@@ -96,8 +96,11 @@ handle_cast(_Request, State = #master_state{}) ->
   {stop, Reason :: term(), NewState :: #master_state{}}).
 %% Handle_info - {nodedown, Node} - distribute the data again because a node is down
 handle_info({nodedown, Node}, State = #master_state{}) ->
-  io:format("A node is down: ~p~n", [Node]),
-  dataDistributor:distribute(),
+  case string:str(atom_to_list(Node), "server") > 0 of
+    true ->  io:format("A node is down: ~p~n", [Node]),
+           dataDistributor:distribute();
+    false -> itsaclient
+  end,
   {noreply, State};
 %% Handle_info - all other requests
 handle_info(_Info, State = #master_state{}) ->
