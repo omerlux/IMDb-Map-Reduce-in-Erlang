@@ -1,4 +1,5 @@
-## This is the final project of "Functional programming in concurrent and distributed systems", by Ilay and Omer
+## Project-Ilay-Omer - Mapreduce IMDb in erlang
+#### This is the final project of "Functional programming in concurrent and distributed systems", by Ilay and Omer
 
 ##### To run ***server***, write the server's name in *@serverslist.txt* - *server#@ip*
 ##### then at each server write the following line on terminal:
