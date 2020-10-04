@@ -29,7 +29,6 @@
 %% note======================================= TODO: =============================================
 %% 1. Mention that the search is case sensitive
 %% 2. Add the number of result for every query, not related to the "Nubmer of results" option
-%% 3. Showing the data on the Grid?
 %% note===========================================================================================
 
 
