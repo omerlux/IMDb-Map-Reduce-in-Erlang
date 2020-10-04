@@ -12,8 +12,8 @@
 %% API
 -export([start/0, readfile/1]).
 -include_lib("wx/include/wx.hrl").
--record(numOfResults,{number}).
--record(reduced_data,{id, title, categoryInfo}).
+-record(numOfResults, {number}).
+-record(reduced_data, {id, title, categoryInfo}).
 -record(state,
 {
   parent,
@@ -86,7 +86,7 @@ handle_click_event(A = #wx{}, _B) ->
   MasterNode = "master@DESKTOP-3NPJUSA",
   _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
   receive
-    %% ************* Handling Query Results: *******************
+  %% ************* Handling Query Results: *******************
     Movies when is_list(Movies) ->
       Window2 = wxWindow:new(),
       Frame = wxFrame:new(Window2, ?wxID_ANY, "Results"),
@@ -94,10 +94,10 @@ handle_click_event(A = #wx{}, _B) ->
       Panel = wxPanel:new(Frame, []),
       %% Setup sizers:
       MainSizer = wxBoxSizer:new(?wxVERTICAL),
-      Label = "For query: Search value: "++Query#query.searchVal++" | Value category: "++Query#query.searchCategory
-        ++" | Information required: "++Query#query.resultCategory,
+      Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
+        ++ " | Information required: " ++ Query#query.resultCategory,
       Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
-      Grid = create_grid(Panel,Movies),
+      Grid = create_grid(Panel, Movies),
       %% Add to sizers:
       Options = [{flag, ?wxEXPAND}, {proportion, 1}],
       wxSizer:add(Sizer, Grid, Options),
@@ -114,52 +114,68 @@ handle_click_event(A = #wx{}, _B) ->
       wxWindow:show(Window2)
   end.
 
-create_grid(Panel,Movies) ->
-  %% Create the grid with 100 * 5 cells
+create_grid(Panel, [Datum = #reduced_data{} | T]) ->
   Grid = wxGrid:new(Panel, 2, []),
-  wxGrid:createGrid(Grid, 100, 5),
-
-  Font = wxFont:new(16, ?wxFONTFAMILY_SWISS,
-    ?wxFONTSTYLE_NORMAL,
-    ?wxFONTWEIGHT_NORMAL, []),
-  %% Fun to set the values and flags of the cells
-  Fun =
-    fun(Row) ->
-      wxGrid:setCellValue(Grid, Row, 0, "blabla"),
-      wxGrid:setCellValue(Grid, Row, 1, "Editable"),
-      wxGrid:setCellValue(Grid, Row, 2, "Editable"),
-      wxGrid:setCellValue(Grid, Row, 3, "Read only"),
-      wxGrid:setCellTextColour(Grid, Row, 3, ?wxWHITE),
-      wxGrid:setReadOnly(Grid, Row, 3, [{isReadOnly, true}]),
-      wxGrid:setCellValue(Grid, Row, 4, "Editable"),
-      case Row rem 4 of
-        0 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxRED);
-        1 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxGREEN),
-          wxGrid:setCellTextColour(Grid, Row, 2, {255, 215, 0, 255});
-        2 -> wxGrid:setCellBackgroundColour(Grid, Row, 3, ?wxBLUE);
-        _ -> wxGrid:setCellBackgroundColour(Grid, Row, 1, ?wxCYAN),
-          wxGrid:setCellValue(Grid, Row, 1,
-            "Centered\nhorizontally"),
-          wxGrid:setCellAlignment(Grid, Row, 4,
-            0, ?wxALIGN_CENTER),
-          wxGrid:setCellValue(Grid, Row, 4,
-            "Centered\nvertically"),
-          wxGrid:setCellAlignment(Grid, Row, 1,
-            ?wxALIGN_CENTER, 0),
-          wxGrid:setCellTextColour(Grid, Row, 3, ?wxBLACK),
-          wxGrid:setCellAlignment(Grid, Row, 2,
-            ?wxALIGN_CENTER,
-            ?wxALIGN_CENTER),
-          wxGrid:setCellFont(Grid, Row, 0, Font),
-          wxGrid:setCellValue(Grid, Row, 2,
-            "Centered vertically\nand horizontally"),
-          wxGrid:setRowSize(Grid, Row, 80)
-      end
+  NumberOfResults = lists:flatlength(T) + 1,
+  wxGrid:createGrid(Grid, NumberOfResults, 3),
+  wxGrid:setColLabelValue(Grid, 0, "Id"),
+  wxGrid:setColLabelValue(Grid, 1, "Title"),
+  wxGrid:setColLabelValue(Grid, 2, "Required Value"),
+  Func =
+    fun({RowNumber, Datum = #reduced_data{}}) ->
+      wxGrid:setCellValue(Grid, RowNumber, 0, Datum#reduced_data.id),
+      wxGrid:setCellValue(Grid, RowNumber, 1, Datum#reduced_data.title),
+      wxGrid:setCellValue(Grid, RowNumber, 2, Datum#reduced_data.categoryInfo)
     end,
-  %% Apply the fun to each row
-  wx:foreach(Fun, lists:seq(0, 99)),
-  wxGrid:setColSize(Grid, 2, 150),
-  %%wxGrid:connect(Grid, grid_cell_change),
+  NumberingList = lists:seq(0, NumberOfResults - 1),
+  RowsList = lists:zip(NumberingList, [Datum | T]),
+  wx:foreach(Func, RowsList),
+  Grid;
+
+create_grid(Panel, Datum = #numOfResults{}) ->
+  Grid = wxGrid:new(Panel, 2, []),
+  wxGrid:createGrid(Grid, 1, 1),
+  wxGrid:setCellValue(Grid, 0, 0, "The number of result is: " ++ Datum#numOfResults.number),
+  Grid;
+
+create_grid(Panel, [Datum = #movie_data{} | T]) ->
+  Grid = wxGrid:new(Panel, 2, []),
+  NumberOfResults = lists:flatlength(T) + 1,
+  wxGrid:createGrid(Grid, NumberOfResults, 14),
+  wxGrid:setColLabelValue(Grid, 0, "Id"),
+  wxGrid:setColLabelValue(Grid, 1, "Title"),
+  wxGrid:setColLabelValue(Grid, 2, "Description"),
+  wxGrid:setColLabelValue(Grid, 3, "Duration (minutes)"),
+  wxGrid:setColLabelValue(Grid, 4, "Genres"),
+  wxGrid:setColLabelValue(Grid, 5, "Country"),
+  wxGrid:setColLabelValue(Grid, 6, "Language"),
+  wxGrid:setColLabelValue(Grid, 7, "Director"),
+  wxGrid:setColLabelValue(Grid, 8, "Writer"),
+  wxGrid:setColLabelValue(Grid, 9, "Actors"),
+  wxGrid:setColLabelValue(Grid, 10, "Production"),
+  wxGrid:setColLabelValue(Grid, 11, "Score"),
+  wxGrid:setColLabelValue(Grid, 12, "Budget"),
+  wxGrid:setColLabelValue(Grid, 13, "Year"),
+  Func =
+    fun({RowNumber, Datum = #movie_data{}}) ->
+      wxGrid:setCellValue(Grid, RowNumber, 0, Datum#movie_data.id),
+      wxGrid:setCellValue(Grid, RowNumber, 1, Datum#movie_data.title),
+      wxGrid:setCellValue(Grid, RowNumber, 2, Datum#movie_data.description),
+      wxGrid:setCellValue(Grid, RowNumber, 3, Datum#movie_data.duration),
+      wxGrid:setCellValue(Grid, RowNumber,4, Datum#movie_data.genre),
+      wxGrid:setCellValue(Grid, RowNumber, 5, Datum#movie_data.country),
+      wxGrid:setCellValue(Grid, RowNumber, 6, Datum#movie_data.language),
+      wxGrid:setCellValue(Grid, RowNumber, 7, Datum#movie_data.director),
+      wxGrid:setCellValue(Grid, RowNumber, 8, Datum#movie_data.writer),
+      wxGrid:setCellValue(Grid, RowNumber, 9, Datum#movie_data.actors),
+      wxGrid:setCellValue(Grid, RowNumber, 10, Datum#movie_data.production_company),
+      wxGrid:setCellValue(Grid, RowNumber, 11, Datum#movie_data.metascore),
+      wxGrid:setCellValue(Grid, RowNumber, 12, Datum#movie_data.budget),
+      wxGrid:setCellValue(Grid, RowNumber, 13, Datum#movie_data.year)
+    end,
+  NumberingList = lists:seq(0, NumberOfResults - 1),
+  RowsList = lists:zip(NumberingList, [Datum | T]),
+  wx:foreach(Func, RowsList),
   Grid.
 
 %% readfile - read file as strings separated by lin9wes
@@ -171,23 +187,7 @@ readfile(FileName) -> %%TODO need to handle errors - when file:read_file returns
 %%error: Error -> {os:system_time(), error, Error}
 %%end.
 
-data2Text([]) -> [];
-data2Text([MovieTuple = #movie_data{} | T]) ->
-  Movie2Text =
-    "Title: " ++ MovieTuple#movie_data.title
-    ++ "\nYear: " ++ MovieTuple#movie_data.year
-    ++ "\nGenre: " ++ MovieTuple#movie_data.genre
-    ++ "\nDuration: " ++ MovieTuple#movie_data.duration
-    ++ "\nCountry: " ++ MovieTuple#movie_data.country
-    ++ "\nLanguage:" ++ MovieTuple#movie_data.language
-    ++ "\nDirector: " ++ MovieTuple#movie_data.director
-    ++ "\nWriter: " ++ MovieTuple#movie_data.writer
-    ++ "\nProduction: " ++ MovieTuple#movie_data.production_company
-    ++ "\nActors: " ++ MovieTuple#movie_data.actors
-    ++ "\nDescription: " ++ MovieTuple#movie_data.description
-    ++ "\nBudget: " ++ MovieTuple#movie_data.budget,
-  Movie2Text ++ "\n" ++ "\n" ++ data2Text(T);
-data2Text(_) -> null.
+
 
 
 
