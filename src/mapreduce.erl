@@ -122,6 +122,7 @@ reduce(MappedList, Query = #query{type = generic}) ->
       writer = Fun_value(Query#query.resultCategory#movie_data.writer, Movie#movie_data.writer),
       production_company = Fun_value(Query#query.resultCategory#movie_data.production_company, Movie#movie_data.production_company),
       actors = Fun_value(Query#query.resultCategory#movie_data.actors, Movie#movie_data.actors),
+      description = Fun_value(Query#query.resultCategory#movie_data.description, Movie#movie_data.description),
       avg_vote = Fun_value(Query#query.resultCategory#movie_data.avg_vote, Movie#movie_data.avg_vote),
       votes = Fun_value(Query#query.resultCategory#movie_data.votes, Movie#movie_data.votes),
       budget = Fun_value(Query#query.resultCategory#movie_data.budget, Movie#movie_data.budget),
