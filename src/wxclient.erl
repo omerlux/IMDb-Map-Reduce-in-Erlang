@@ -97,6 +97,12 @@ start() ->
   wxWindow:setSizer(Frame, MainSizer),
   wxFrame:show(Frame).
 
+%%handle_click_event(_, _) -> for showing window
+%%  Window3 = wxWindow:new(),
+%%  Frame3 = wxFrame:new(Window3, ?wxID_ANY, "DEBUG"),
+%%  wxWindow:show(Window3),
+%%  wxFrame:show(Frame3);
+
 handle_click_event(A = #wx{}, _B) ->
   {Env, TextBox, ListBox, CheckBoxes} = A#wx.userData,
   wx:set_env(Env),
@@ -105,23 +111,23 @@ handle_click_event(A = #wx{}, _B) ->
     id = true,
     title = true,
     original_title = false,
-    year = wxCheckBox:getValue(lists:nth(12,CheckBoxes)),
+    year = wxCheckBox:getValue(lists:nth(12, CheckBoxes)),
     date_published = false,
-    genre = wxCheckBox:getValue(lists:nth(2,CheckBoxes)),
-    duration = wxCheckBox:getValue(lists:nth(1,CheckBoxes)),
-    country = wxCheckBox:getValue(lists:nth(3,CheckBoxes)),
-    language = wxCheckBox:getValue(lists:nth(4,CheckBoxes)),
-    director = wxCheckBox:getValue(lists:nth(5,CheckBoxes)),
-    writer = wxCheckBox:getValue(lists:nth(6,CheckBoxes)),
-    production_company = wxCheckBox:getValue(lists:nth(8,CheckBoxes)),
-    actors = wxCheckBox:getValue(lists:nth(7,CheckBoxes)),
-    description = wxCheckBox:getValue(lists:nth(11,CheckBoxes)),
+    genre = wxCheckBox:getValue(lists:nth(2, CheckBoxes)),
+    duration = wxCheckBox:getValue(lists:nth(1, CheckBoxes)),
+    country = wxCheckBox:getValue(lists:nth(3, CheckBoxes)),
+    language = wxCheckBox:getValue(lists:nth(4, CheckBoxes)),
+    director = wxCheckBox:getValue(lists:nth(5, CheckBoxes)),
+    writer = wxCheckBox:getValue(lists:nth(6, CheckBoxes)),
+    production_company = wxCheckBox:getValue(lists:nth(8, CheckBoxes)),
+    actors = wxCheckBox:getValue(lists:nth(7, CheckBoxes)),
+    description = wxCheckBox:getValue(lists:nth(11, CheckBoxes)),
     avg_vote = false,
     votes = false,
-    budget = wxCheckBox:getValue(lists:nth(10,CheckBoxes)),
+    budget = wxCheckBox:getValue(lists:nth(10, CheckBoxes)),
     usa_gross_income = false,
     worlwide_gross_income = false,
-    metascore = wxCheckBox:getValue(lists:nth(9,CheckBoxes)),
+    metascore = wxCheckBox:getValue(lists:nth(9, CheckBoxes)),
     reviews_from_users = false,
     reviews_from_critics = false
   },
@@ -177,87 +183,93 @@ handle_click_event(A = #wx{}, _B) ->
 %%  wx:foreach(Func, RowsList),
 %%  Grid.
 
-create_grid(Panel, [Datum = #movie_data{} | T], Query=#query{}) ->
+create_grid(Panel, [Datum = #movie_data{} | T], Query = #query{}) ->
   Grid = wxGrid:new(Panel, 2, []),
   NumberOfResults = lists:flatlength(T) + 1,
   ResultsCategories = Query#query.resultCategory,
-  NumberOfCategories = countTrueCategories(ResultsCategories,3,2),
-  wxGrid:createGrid(Grid, NumberOfResults, NumberOfCategories),
+
+  NumberOfCategories = countTrueCategories(ResultsCategories, 3, 2),
+%%  Window3 = wxWindow:new(),
+%%  Frame3 = wxFrame:new(Window3, ?wxID_ANY, "DEBUG"),
+%%  wxWindow:show(Window3),
+%%  wxFrame:show(Frame3),
+  wxGrid:createGrid(Grid, NumberOfResults, NumberOfCategories-1),
   wxGrid:setColLabelValue(Grid, 0, "Id"),
   wxGrid:setColLabelValue(Grid, 1, "Title"),
-  Counter= counters:new(2,[]),
+  Counter = counters:new(1, []),
+  counters:add(Counter, 1, 2),
   if Query#query.resultCategory#movie_data.description =:= true ->
-     wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Description"),
-     counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Description"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.duration =:= true ->
-      wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Duration (minutes)"),
-      counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Duration (minutes)"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.genre =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Genres"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Genres"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.country =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Country"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Country"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.language =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Language"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Language"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.director =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Director"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Director"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.writer =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Writer"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Writer"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.actors =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Actors"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Actors"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.production_company =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Production"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Production"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.metascore =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Score"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Score"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.budget =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Budget"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Budget"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
 
   if Query#query.resultCategory#movie_data.year =:= true ->
-    wxGrid:setColLabelValue(Grid, counters:get(Counter,1), "Year"),
-    counters:add(Counter,1,1);
+    wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Year"),
+    counters:add(Counter, 1, 1);
     true -> void
   end,
-  counters:put(Counter,1,2),
+
 %%  wxGrid:setColLabelValue(Grid, 3, "Duration (minutes)"),
 %%  wxGrid:setColLabelValue(Grid, 4, "Genres"),
 %%  wxGrid:setColLabelValue(Grid, 5, "Country"),
@@ -271,66 +283,68 @@ create_grid(Panel, [Datum = #movie_data{} | T], Query=#query{}) ->
 %%  wxGrid:setColLabelValue(Grid, 13, "Year"),
   Func =
     fun({RowNumber, Datum = #movie_data{}}) ->
+      Counter2 = counters:new(1, []),
+      counters:put(Counter2, 1, 2),
       wxGrid:setCellValue(Grid, RowNumber, 0, Datum#movie_data.id),
       wxGrid:setCellValue(Grid, RowNumber, 1, Datum#movie_data.title),
       if Query#query.resultCategory#movie_data.description =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.description),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.description),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.duration =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.duration),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.duration),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.genre =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.genre),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.genre),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.country =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.country),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.country),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.language =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.language),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.language),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.director =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.director),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.director),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.writer =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.writer),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.writer),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.actors =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.actors),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.actors),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.production_company =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.production_company),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.production_company),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.metascore =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.metascore),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.metascore),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.budget =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.budget),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.budget),
+        counters:add(Counter2, 1, 1);
         true -> void
       end,
       if Query#query.resultCategory#movie_data.year =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter,1), Datum#movie_data.year),
-        counters:add(Counter,1,1);
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.year),
+        counters:add(Counter2, 1, 1);
         true -> void
       end
 
@@ -351,7 +365,7 @@ create_grid(Panel, [Datum = #movie_data{} | T], Query=#query{}) ->
   wx:foreach(Func, RowsList),
   Grid;
 
-create_grid(Panel, ResultsList, Query) when is_list(ResultsList)->
+create_grid(Panel, ResultsList, Query) when is_list(ResultsList) ->
   Grid = wxGrid:new(Panel, 2, []),
   wxGrid:createGrid(Grid, 1, 1),
   Sum = lists:sum([Number || {numOfResults, Number} <- ResultsList]),
@@ -367,15 +381,18 @@ readfile(FileName) -> %%TODO need to handle errors - when file:read_file returns
 %%error: Error -> {os:system_time(), error, Error}
 %%end.
 
-countTrueCategories(ResultsCategories = #movie_data{},StartIndex, Count) ->
-  if element(StartIndex, ResultsCategories) =:= true -> countTrueCategories(ResultsCategories, StartIndex+1,Count+1);
-      true ->countTrueCategories(ResultsCategories, StartIndex+1,Count)
+countTrueCategories(ResultsCategories = #movie_data{}, 22, Count) ->
+  if element(22, ResultsCategories) =:= true -> Count + 1;
+    true -> Count
   end;
 
-countTrueCategories(ResultsCategories = #movie_data{},22, Count) ->
-  if element(22, ResultsCategories) =:= true -> Count+1;
-     true -> Count
+countTrueCategories(ResultsCategories = #movie_data{}, StartIndex, Count) ->
+  if element(StartIndex, ResultsCategories) =:= true ->
+    countTrueCategories(ResultsCategories, StartIndex + 1, Count + 1);
+    true -> countTrueCategories(ResultsCategories, StartIndex + 1, Count)
   end.
+
+
 
 create_checkboxes(Panel) ->
   CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
