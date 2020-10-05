@@ -25,8 +25,7 @@
 -record(query, {type, searchVal, searchCategory, resultCategory}).
 
 %% note======================================= TODO: =============================================
-%% 1. Mention that the search is case sensitive
-%% 2. Add the number of result for every query, not related to the "Nubmer of results" option
+%% 2. Add the number of result for every query, not related to the "Number of results" option
 %% note===========================================================================================
 
 
@@ -41,9 +40,9 @@ start() ->
   SubSizer1 = wxBoxSizer:new(?wxVERTICAL),
   SubSizer2 = wxBoxSizer:new(?wxVERTICAL),
   TopTxt = wxStaticText:new(Frame, ?wxID_ANY, "Query Window"),
-  Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value:"),
+  Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value (case-sensitive):"),
   TextCtrl = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
-  wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here"),
+  wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here (case-sensitive)"),
   ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
   wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
   Choices = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
@@ -54,9 +53,8 @@ start() ->
   wxListBox:setToolTip(ListBox, "Choose your search value category"),
 %%  ComboBox = wxComboBox:new(Frame, 5, [{choices, Choices2}]),
 %%  wxComboBox:setToolTip(ComboBox, "Choose the category your interested in from the results"),
-  CheckBoxSizer = create_checkboxes(Frame),
-  wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
-    {userData, {wx:get_env(), TextCtrl, ListBox, CheckBoxSizer}}]),
+%%  CheckBoxSizer = create_checkboxes(Frame),
+
 
   %%note: Sizers setup -------------------------------------------------------------------------------------------------
   wxSizer:add(SubSizer1, TopTxt, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
@@ -64,7 +62,32 @@ start() ->
   wxSizer:add(SubSizer1, TextCtrl, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ListBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   %%wxSizer:add(SubSizer1, ComboBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  wxSizer:add(SubSizer1, CheckBoxSizer, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
+%%  wxSizer:add(SubSizer1, CheckBoxSizer, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
+
+  CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame,
+    [{label, "Select Categories (ID, Title are always selected):"}]),
+  CheckBoxes =
+    [wxCheckBox:new(Frame, 1, "Duration", []),
+      wxCheckBox:new(Frame, 2, "Genre", []),
+      wxCheckBox:new(Frame, 3, "Country", []),
+      wxCheckBox:new(Frame, 4, "Language", []),
+      wxCheckBox:new(Frame, 5, "Director", []),
+      wxCheckBox:new(Frame, 6, "Writer", []),
+      wxCheckBox:new(Frame, 7, "Actors", []),
+      wxCheckBox:new(Frame, 8, "Production", []),
+      wxCheckBox:new(Frame, 9, "Score", []),
+      wxCheckBox:new(Frame, 10, "Budget", []),
+      wxCheckBox:new(Frame, 11, "Description", []),
+      wxCheckBox:new(Frame, 12, "Year", [])],
+  Fun =
+    fun(Item) ->
+      %%wxCheckBox:connect(Item, command_checkbox_clicked),
+      wxSizer:add(CheckSizer, Item)
+    end,
+  wx:foreach(Fun, CheckBoxes),
+  wxSizer:add(SubSizer1, CheckSizer),
+  wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
+    {userData, {wx:get_env(), TextCtrl, ListBox, CheckBoxes}}]),
   wxSizer:add(SubSizer1, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
 
   Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL, [{underlined, true}]),
@@ -75,30 +98,30 @@ start() ->
   wxFrame:show(Frame).
 
 handle_click_event(A = #wx{}, _B) ->
-  {Env, TextBox, ListBox, CheckBoxSizer} = A#wx.userData,
+  {Env, TextBox, ListBox, CheckBoxes} = A#wx.userData,
   wx:set_env(Env),
   %%Create the resultCategory true/false tuple:
   Categories2Show = #movie_data{
     id = true,
     title = true,
     original_title = false,
-    year = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,12)),
+    year = wxCheckBox:getValue(lists:nth(12,CheckBoxes)),
     date_published = false,
-    genre = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,2)),
-    duration = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,1)),
-    country = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,3)),
-    language = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,4)),
-    director = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,5)),
-    writer = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,6)),
-    production_company = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,8)),
-    actors = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,7)),
-    description = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,11)),
+    genre = wxCheckBox:getValue(lists:nth(2,CheckBoxes)),
+    duration = wxCheckBox:getValue(lists:nth(1,CheckBoxes)),
+    country = wxCheckBox:getValue(lists:nth(3,CheckBoxes)),
+    language = wxCheckBox:getValue(lists:nth(4,CheckBoxes)),
+    director = wxCheckBox:getValue(lists:nth(5,CheckBoxes)),
+    writer = wxCheckBox:getValue(lists:nth(6,CheckBoxes)),
+    production_company = wxCheckBox:getValue(lists:nth(8,CheckBoxes)),
+    actors = wxCheckBox:getValue(lists:nth(7,CheckBoxes)),
+    description = wxCheckBox:getValue(lists:nth(11,CheckBoxes)),
     avg_vote = false,
     votes = false,
-    budget = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,10)),
+    budget = wxCheckBox:getValue(lists:nth(10,CheckBoxes)),
     usa_gross_income = false,
     worlwide_gross_income = false,
-    metascore = wxCheckBox:getValue(wxSizer:getItem(CheckBoxSizer,9)),
+    metascore = wxCheckBox:getValue(lists:nth(9,CheckBoxes)),
     reviews_from_users = false,
     reviews_from_critics = false
   },
@@ -117,8 +140,7 @@ handle_click_event(A = #wx{}, _B) ->
       Panel = wxPanel:new(Frame, []),
       %% Setup sizers:
       MainSizer = wxBoxSizer:new(?wxVERTICAL),
-      Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
-        ++ " | Information required: " ++ Query#query.resultCategory,
+      Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory,
       Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
       Grid = create_grid(Panel, Movies, Query),
       %% Add to sizers:
@@ -358,7 +380,6 @@ countTrueCategories(ResultsCategories = #movie_data{},22, Count) ->
 create_checkboxes(Panel) ->
   CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
     [{label, "Select Categories (ID, Title are always selected):"}]),
-
   CheckBoxes =
     [wxCheckBox:new(Panel, 1, "Duration", []),
       wxCheckBox:new(Panel, 2, "Genre", []),
@@ -372,7 +393,6 @@ create_checkboxes(Panel) ->
       wxCheckBox:new(Panel, 10, "Budget", []),
       wxCheckBox:new(Panel, 11, "Description", []),
       wxCheckBox:new(Panel, 12, "Year", [])],
-
   Fun =
     fun(Item) ->
       %%wxCheckBox:connect(Item, command_checkbox_clicked),
