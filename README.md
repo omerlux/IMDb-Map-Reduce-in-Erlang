@@ -10,9 +10,12 @@
  
  *clients* can be created in any computer/terminal and ask for different kinds of queries from the *master* node. The answer will be delivered from each *server* (which contains different records), to the *master* and then the master will group them into one result which will be sent back to the client.
 
+- ### Thechnical Overview:
+<div style=height: 176px; overflow: hidden">
 <p align="center">
   <img src="https://disco.readthedocs.io/en/latest/_images/disco-arch.png">
 </p>
+</div>
 
 ##### Our overview of the system (Same as [Disco-Project](https://disco.readthedocs.io/en/latest/overview.html))
 
