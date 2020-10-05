@@ -42,7 +42,7 @@ sendData(_CSV, [], {_, _, _}) ->
 sendData(CSV, [Sx | Servers], {Start, NumRows, Jump}) ->
   if
     Start + Jump < NumRows -> NextStart = Start + Jump;
-    true -> NextStart = NumRows + 2
+    true -> NextStart = NumRows + 2sh
   end,
   % spawning a sender process
   spawn(fun() -> sendServerJob(lists:sublist(CSV, Start, Jump), Sx) end),
