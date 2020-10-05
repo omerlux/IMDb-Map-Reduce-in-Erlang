@@ -17,7 +17,7 @@
 %% note: there aren't any duplicated data. the data is being shuffled
 distribute() ->
   Start = os:timestamp(),
-  CSV_unshuffled = parse_csv:main(["../csvexample.csv"]),   % getting csv file
+  CSV_unshuffled = parse_csv:main(["../movies1000.csv"]),   % getting csv file
   CSV = [Y || {_,Y} <- lists:sort([{rand:uniform(), N} || N <- CSV_unshuffled])], % shuffling it randomly
   NumRows = lists:flatlength(CSV) - 1,
   Servers = checkAlive(readfile(["serverslist.txt"]), []),
@@ -26,7 +26,8 @@ distribute() ->
     true -> sendData(CSV, Servers, {2, NumRows, ceil(NumRows / NumServers)}), % {start, stop, jump}
       io:format("Sent ~p movie records to ~p servers in ~p ms.~n", [NumRows, NumServers, round(timer:now_diff(os:timestamp(), Start) / 1000)]);
     false -> io:format("No servers available...~n")
-  end.
+  end,
+  {NumServers,Servers}.
 
 
 %% readfile - read file as strings separated by lines
