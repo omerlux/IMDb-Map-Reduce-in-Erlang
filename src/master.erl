@@ -20,7 +20,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(master_state, {}).
+-record(master_state, {servers = {0,[]}}).
 -record(query, {type, searchVal, searchCategory, resultCategory}).
 %%%===================================================================
 %%% API
@@ -31,9 +31,8 @@
   {ok, Pid :: pid()} | ignore | {error, Reason :: term()}).
 start_link() ->
   {ok, Pid} = gen_server:start_link({global, node()}, ?MODULE, [], []),
-  register(masterpid, Pid),
-  % distributing the data to whom that is ready to receive.
-  dataDistributor:distribute().
+  register(masterpid, Pid).
+
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -47,7 +46,9 @@ start_link() ->
 init([]) ->
   io:format("Master started.~n"),
   net_kernel:monitor_nodes(true),
-  {ok, #master_state{}}.
+  % distributing the data to whom that is ready to receive.
+  ServersInfo = dataDistributor:distribute(),
+  {ok, #master_state{servers = ServersInfo}}.
 
 %% @private
 %% @doc Handling call messages
@@ -61,7 +62,7 @@ init([]) ->
   {stop, Reason :: term(), NewState :: #master_state{}}).
 %% handle_call - query format answer
 handle_call(Query = #query{}, {FromPID, _Tag}, State = #master_state{}) ->
-  PID = spawn(fun() -> sendQuery(Query, FromPID) end),
+  PID = spawn(fun() -> sendQuery(Query, FromPID, element(1,State#master_state.servers),element(2,State#master_state.servers)) end),
   io:format("Received query from ~p, created PID ~p~n", [FromPID, PID]),
   {reply, ok, State};
 %% Handle_call - all other queries won't be replied
@@ -74,19 +75,23 @@ handle_call(_Request, _From, State = #master_state{}) ->
   {noreply, NewState :: #master_state{}} |
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
+
 %% Handle_cast - nodeup format answer
 handle_cast({nodeup, Node}, State = #master_state{}) ->
   case lists:member(atom_to_list(Node), dataDistributor:readfile(["serverslist.txt"])) of
     true -> %% note: no other request can be handled while distributing
       io:format("A new node is up: ~p~n", [Node]),
-      dataDistributor:distribute();
-    false -> noupdate         % server isn't part of the distribution
+      ServersInfo = dataDistributor:distribute(),
+      UpdatedState = State#master_state{servers = ServersInfo};
+    false ->  UpdatedState = State         % server isn't part of the distribution
   end,
-  {noreply, State};
+  {noreply, UpdatedState};
+
 %% Handle_cast - all other casted messages
 handle_cast(_Request, State = #master_state{}) ->
   io:format("Message received: ~p~n", [_Request]),
   {noreply, State}.
+
 
 %% @private
 %% @doc Handling all non call/cast messages
@@ -94,14 +99,18 @@ handle_cast(_Request, State = #master_state{}) ->
   {noreply, NewState :: #master_state{}} |
   {noreply, NewState :: #master_state{}, timeout() | hibernate} |
   {stop, Reason :: term(), NewState :: #master_state{}}).
+
 %% Handle_info - {nodedown, Node} - distribute the data again because a node is down
 handle_info({nodedown, Node}, State = #master_state{}) ->
   case string:str(atom_to_list(Node), "server") > 0 of
-    true ->  io:format("A node is down: ~p~n", [Node]),
-           dataDistributor:distribute();
-    false -> itsaclient
+    true ->
+      io:format("A node is down: ~p~n", [Node]),
+      ServersInfo = dataDistributor:distribute();
+    false ->
+      ServersInfo = State#master_state.servers
   end,
-  {noreply, State};
+  {noreply, State#master_state{servers = ServersInfo}};
+
 %% Handle_info - all other requests
 handle_info(_Info, State = #master_state{}) ->
   {noreply, State}.
@@ -128,10 +137,8 @@ code_change(_OldVsn, State = #master_state{}, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-sendQuery(Query = #query{}, FromPID) ->
-  Servers = readfile(["serverslist.txt"]),
-  NumberOfServers = countList(Servers),
-  Result = sendQuery(Query, Servers, NumberOfServers),
+sendQuery(Query = #query{}, FromPID, NumOfServers, Servers) ->
+  Result = sendQuery(Query, Servers, NumOfServers),
   io:format("Received final result *** ~p *** at ~p, sending it to ~p~n", [Result, self(), FromPID]),
   FromPID ! Result.
 
@@ -145,9 +152,8 @@ sendQuery(Query = #query{}, [Server0 | T], _NumberOfServers) ->
   sendQuery(Query, T, _NumberOfServers).
 
 sendServerJob(ParentPID, Query = #query{}, Server) ->
-  ServerNode = list_to_atom(Server),
   % sending from gen_server the values of the data
-  gen_server:call({serverpid, ServerNode}, Query),
+  gen_server:call({serverpid, Server}, Query),
   receive
     table_error ->
       io:format("Server ~p returned table_error~n", [Server]);
