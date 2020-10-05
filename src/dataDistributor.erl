@@ -17,7 +17,8 @@
 %% NOTE: for now, there aren't any duplicated data..
 distribute() ->
   Start = os:timestamp(),
-  CSV = parse_csv:main(["../csvexample.csv"]),
+  CSV_unshuffled = parse_csv:main(["../csvexample.csv"]),   % getting csv file
+  CSV = [Y || {_,Y} <- lists:sort([{rand:uniform(), N} || N <- CSV_unshuffled])], % shuffling it randomly
   NumRows = lists:flatlength(CSV) - 1,
   Servers = checkAlive(readfile(["serverslist.txt"]), []),
   NumServers = lists:flatlength(Servers),
