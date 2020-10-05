@@ -12,11 +12,8 @@
 %% API
 -export([start/0, readfile/1]).
 -include_lib("wx/include/wx.hrl").
--record(numOfResults, {number}).
--record(reduced_data, {id, title, categoryInfo}).
--record(state,
-{
-  parent, config}).
+
+%%-record(state, {parent, config}).
 -record(movie_data, {id, title, original_title, year,
   date_published, genre, duration, country, language, director,
   writer, production_company, actors, description, avg_vote,
@@ -35,10 +32,9 @@ start() ->
 
   %%note: Frame and components build -----------------------------------------------------------------------------------
   WX = wx:new(),
-  Frame = wxFrame:new(WX, 1, "Disco Map-Reduce Project"), %%TODO whats the difference from Panel?
+  Frame = wxFrame:new(WX, 1, "IMDb Map-Reduce Project"), %%TODO whats the difference from Panel?
   MainSizer = wxBoxSizer:new(?wxVERTICAL),
   SubSizer1 = wxBoxSizer:new(?wxVERTICAL),
-  SubSizer2 = wxBoxSizer:new(?wxVERTICAL),
   TopTxt = wxStaticText:new(Frame, ?wxID_ANY, "Query Window"),
   Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value (case-sensitive):"),
   TextCtrl = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
@@ -46,24 +42,16 @@ start() ->
   ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
   wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
   Choices = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
-  Choices2 = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget", "Number of results", "All"],
   %% Create a wxListBox that uses multiple selection
   ListBox = wxListBox:new(Frame, 1, [{size, {-1, 100}},
     {choices, Choices}, {style, ?wxLB_SINGLE}]),
   wxListBox:setToolTip(ListBox, "Choose your search value category"),
-%%  ComboBox = wxComboBox:new(Frame, 5, [{choices, Choices2}]),
-%%  wxComboBox:setToolTip(ComboBox, "Choose the category your interested in from the results"),
-%%  CheckBoxSizer = create_checkboxes(Frame),
-
 
   %%note: Sizers setup -------------------------------------------------------------------------------------------------
   wxSizer:add(SubSizer1, TopTxt, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, TextCtrl, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(SubSizer1, ListBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  %%wxSizer:add(SubSizer1, ComboBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-%%  wxSizer:add(SubSizer1, CheckBoxSizer, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
-
   CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame,
     [{label, "Select Categories (ID, Title are always selected):"}]),
   CheckBoxes =
@@ -93,15 +81,8 @@ start() ->
   Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL, [{underlined, true}]),
   wxTextCtrl:setFont(TopTxt, Font),
   wxSizer:add(MainSizer, SubSizer1, [{flag, ?wxALIGN_LEFT}, {border, 5}]),
-  wxSizer:add(MainSizer, SubSizer2, [{flag, ?wxALIGN_RIGHT}, {border, 5}]),
   wxWindow:setSizer(Frame, MainSizer),
   wxFrame:show(Frame).
-
-%%handle_click_event(_, _) -> for showing window
-%%  Window3 = wxWindow:new(),
-%%  Frame3 = wxFrame:new(Window3, ?wxID_ANY, "DEBUG"),
-%%  wxWindow:show(Window3),
-%%  wxFrame:show(Frame3);
 
 handle_click_event(A = #wx{}, _B) ->
   {Env, TextBox, ListBox, CheckBoxes} = A#wx.userData,
@@ -122,20 +103,20 @@ handle_click_event(A = #wx{}, _B) ->
     production_company = wxCheckBox:getValue(lists:nth(8, CheckBoxes)),
     actors = wxCheckBox:getValue(lists:nth(7, CheckBoxes)),
     description = wxCheckBox:getValue(lists:nth(11, CheckBoxes)),
-    avg_vote = false,
+    avg_vote = wxCheckBox:getValue(lists:nth(9, CheckBoxes)),
     votes = false,
     budget = wxCheckBox:getValue(lists:nth(10, CheckBoxes)),
     usa_gross_income = false,
     worlwide_gross_income = false,
-    metascore = wxCheckBox:getValue(lists:nth(9, CheckBoxes)),
+    metascore = false,
     reviews_from_users = false,
     reviews_from_critics = false
   },
   Query = #query{type = generic,
     searchVal = wxTextCtrl:getValue(TextBox),
     searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)), resultCategory = Categories2Show},
-  %%[MasterNode | _T] = readfile(["clientslist.txt"]), %%TODO had a problem reading the file...
-  MasterNode = "master@DESKTOP-3NPJUSA",
+  [MasterNode | _T] = readfile(["clientslist.txt"]), %%TODO had a problem reading the file...
+  %%MasterNode = "master@DESKTOP-3NPJUSA",
   _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
   receive
   %% ************* Handling Query Results: *******************
@@ -146,9 +127,11 @@ handle_click_event(A = #wx{}, _B) ->
       Panel = wxPanel:new(Frame, []),
       %% Setup sizers:
       MainSizer = wxBoxSizer:new(?wxVERTICAL),
-      Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory,
+      NumberOfResults = lists:flatlength(Movies),
+      Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
+      ++ " | "++integer_to_list(NumberOfResults)++" Results",
       Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
-      Grid = create_grid(Panel, Movies, Query),
+      Grid = create_grid(Panel, Movies, NumberOfResults, Query),
       %% Add to sizers:
       Options = [{flag, ?wxEXPAND}, {proportion, 1}],
       wxSizer:add(Sizer, Grid, Options),
@@ -165,36 +148,12 @@ handle_click_event(A = #wx{}, _B) ->
       wxWindow:show(Window2)
   end.
 
-%%create_grid(Panel, [Datum = #reduced_data{} | T]) ->
-%%  Grid = wxGrid:new(Panel, 2, []),
-%%  NumberOfResults = lists:flatlength(T) + 1,
-%%  wxGrid:createGrid(Grid, NumberOfResults, 3),
-%%  wxGrid:setColLabelValue(Grid, 0, "Id"),
-%%  wxGrid:setColLabelValue(Grid, 1, "Title"),
-%%  wxGrid:setColLabelValue(Grid, 2, "Required Value"),
-%%  Func =
-%%    fun({RowNumber, Datum = #reduced_data{}}) ->
-%%      wxGrid:setCellValue(Grid, RowNumber, 0, Datum#reduced_data.id),
-%%      wxGrid:setCellValue(Grid, RowNumber, 1, Datum#reduced_data.title),
-%%      wxGrid:setCellValue(Grid, RowNumber, 2, Datum#reduced_data.categoryInfo)
-%%    end,
-%%  NumberingList = lists:seq(0, NumberOfResults - 1),
-%%  RowsList = lists:zip(NumberingList, [Datum | T]),
-%%  wx:foreach(Func, RowsList),
-%%  Grid.
-
-create_grid(Panel, [Datum = #movie_data{} | T], Query = #query{}) ->
+create_grid(Panel, [Datum2 = #movie_data{} | T],NumberOfResults, Query = #query{}) ->
   Grid = wxGrid:new(Panel, 2, []),
-  NumberOfResults = lists:flatlength(T) + 1,
   ResultsCategories = Query#query.resultCategory,
-
   NumberOfCategories = countTrueCategories(ResultsCategories, 3, 2),
-%%  Window3 = wxWindow:new(),
-%%  Frame3 = wxFrame:new(Window3, ?wxID_ANY, "DEBUG"),
-%%  wxWindow:show(Window3),
-%%  wxFrame:show(Frame3),
-  wxGrid:createGrid(Grid, NumberOfResults, NumberOfCategories-1),
-  wxGrid:setColLabelValue(Grid, 0, "Id"),
+  wxGrid:createGrid(Grid, NumberOfResults, NumberOfCategories - 1),
+  wxGrid:setColLabelValue(Grid, 0, "ID"),
   wxGrid:setColLabelValue(Grid, 1, "Title"),
   Counter = counters:new(1, []),
   counters:add(Counter, 1, 2),
@@ -252,7 +211,7 @@ create_grid(Panel, [Datum = #movie_data{} | T], Query = #query{}) ->
     true -> void
   end,
 
-  if Query#query.resultCategory#movie_data.metascore =:= true ->
+  if Query#query.resultCategory#movie_data.avg_vote =:= true ->
     wxGrid:setColLabelValue(Grid, counters:get(Counter, 1), "Score"),
     counters:add(Counter, 1, 1);
     true -> void
@@ -269,18 +228,6 @@ create_grid(Panel, [Datum = #movie_data{} | T], Query = #query{}) ->
     counters:add(Counter, 1, 1);
     true -> void
   end,
-
-%%  wxGrid:setColLabelValue(Grid, 3, "Duration (minutes)"),
-%%  wxGrid:setColLabelValue(Grid, 4, "Genres"),
-%%  wxGrid:setColLabelValue(Grid, 5, "Country"),
-%%  wxGrid:setColLabelValue(Grid, 6, "Language"),
-%%  wxGrid:setColLabelValue(Grid, 7, "Director"),
-%%  wxGrid:setColLabelValue(Grid, 8, "Writer"),
-%%  wxGrid:setColLabelValue(Grid, 9, "Actors"),
-%%  wxGrid:setColLabelValue(Grid, 10, "Production"),
-%%  wxGrid:setColLabelValue(Grid, 11, "Score"),
-%%  wxGrid:setColLabelValue(Grid, 12, "Budget"),
-%%  wxGrid:setColLabelValue(Grid, 13, "Year"),
   Func =
     fun({RowNumber, Datum = #movie_data{}}) ->
       Counter2 = counters:new(1, []),
@@ -332,8 +279,8 @@ create_grid(Panel, [Datum = #movie_data{} | T], Query = #query{}) ->
         counters:add(Counter2, 1, 1);
         true -> void
       end,
-      if Query#query.resultCategory#movie_data.metascore =:= true ->
-        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.metascore),
+      if Query#query.resultCategory#movie_data.avg_vote =:= true ->
+        wxGrid:setCellValue(Grid, RowNumber, counters:get(Counter2, 1), Datum#movie_data.avg_vote),
         counters:add(Counter2, 1, 1);
         true -> void
       end,
@@ -347,29 +294,10 @@ create_grid(Panel, [Datum = #movie_data{} | T], Query = #query{}) ->
         counters:add(Counter2, 1, 1);
         true -> void
       end
-
-%%      wxGrid:setCellValue(Grid, RowNumber, 3, Datum#movie_data.duration),
-%%      wxGrid:setCellValue(Grid, RowNumber, 4, Datum#movie_data.genre),
-%%      wxGrid:setCellValue(Grid, RowNumber, 5, Datum#movie_data.country),
-%%      wxGrid:setCellValue(Grid, RowNumber, 6, Datum#movie_data.language),
-%%      wxGrid:setCellValue(Grid, RowNumber, 7, Datum#movie_data.director),
-%%      wxGrid:setCellValue(Grid, RowNumber, 8, Datum#movie_data.writer),
-%%      wxGrid:setCellValue(Grid, RowNumber, 9, Datum#movie_data.actors),
-%%      wxGrid:setCellValue(Grid, RowNumber, 10, Datum#movie_data.production_company),
-%%      wxGrid:setCellValue(Grid, RowNumber, 11, Datum#movie_data.metascore),
-%%      wxGrid:setCellValue(Grid, RowNumber, 12, Datum#movie_data.budget),
-%%      wxGrid:setCellValue(Grid, RowNumber, 13, Datum#movie_data.year)
     end,
   NumberingList = lists:seq(0, NumberOfResults - 1),
-  RowsList = lists:zip(NumberingList, [Datum | T]),
+  RowsList = lists:zip(NumberingList, [Datum2 | T]),
   wx:foreach(Func, RowsList),
-  Grid;
-
-create_grid(Panel, ResultsList, Query) when is_list(ResultsList) ->
-  Grid = wxGrid:new(Panel, 2, []),
-  wxGrid:createGrid(Grid, 1, 1),
-  Sum = lists:sum([Number || {numOfResults, Number} <- ResultsList]),
-  wxGrid:setCellValue(Grid, 0, 0, "The number of result is: " ++ integer_to_list(Sum)),
   Grid.
 
 %% readfile - read file as strings separated by lin9wes
@@ -392,31 +320,6 @@ countTrueCategories(ResultsCategories = #movie_data{}, StartIndex, Count) ->
     true -> countTrueCategories(ResultsCategories, StartIndex + 1, Count)
   end.
 
-
-
-create_checkboxes(Panel) ->
-  CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel,
-    [{label, "Select Categories (ID, Title are always selected):"}]),
-  CheckBoxes =
-    [wxCheckBox:new(Panel, 1, "Duration", []),
-      wxCheckBox:new(Panel, 2, "Genre", []),
-      wxCheckBox:new(Panel, 3, "Country", []),
-      wxCheckBox:new(Panel, 4, "Language", []),
-      wxCheckBox:new(Panel, 5, "Director", []),
-      wxCheckBox:new(Panel, 6, "Writer", []),
-      wxCheckBox:new(Panel, 7, "Actors", []),
-      wxCheckBox:new(Panel, 8, "Production", []),
-      wxCheckBox:new(Panel, 9, "Score", []),
-      wxCheckBox:new(Panel, 10, "Budget", []),
-      wxCheckBox:new(Panel, 11, "Description", []),
-      wxCheckBox:new(Panel, 12, "Year", [])],
-  Fun =
-    fun(Item) ->
-      %%wxCheckBox:connect(Item, command_checkbox_clicked),
-      wxSizer:add(CheckSizer, Item)
-    end,
-  wx:foreach(Fun, CheckBoxes),
-  CheckSizer.
 
 
 
