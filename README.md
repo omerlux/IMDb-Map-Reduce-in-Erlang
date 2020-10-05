@@ -3,8 +3,11 @@
  
 - ### Description:
  
- The main purpose of the project is to implement a map-reduce algorithm for iMDB. The data is taken from Kaggle and conatins ~85k records of movies.
+ The main purpose of the project is to implement a map-reduce algorithm for iMDB. 
+ 
+ The data is taken from Kaggle and conatins ~85k records of movies.
  In addition, we created a distributed machine which distributes the data from *master* node to *servers* node. Number of servers can be choose by the user.
+ 
  *clients* can be created in any computer/terminal and ask for different kinds of queries from the *master* node. The answer will be delivered from each *server* (which contains different records), to the *master* and then the master will group them into one result which will be sent back to the client.
 
 - ### R:
