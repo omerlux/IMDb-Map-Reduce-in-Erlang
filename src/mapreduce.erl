@@ -74,11 +74,11 @@ map(Table, Query = #query{type = generic, searchVal = SearchVal}) ->
       case string:str(SearchVal, ".") > 0 of
           true -> % it's a float
             [Movie || {_id, Movie} <- ets:tab2list(Table),
-              Movie#movie_data.avg_vote >= float_to_list(list_to_float(SearchVal) - 0.5),
+              Movie#movie_data.avg_vote > float_to_list(list_to_float(SearchVal) - 0.6),
               Movie#movie_data.avg_vote < float_to_list(list_to_float(SearchVal) + 0.5)];
           false -> % it's an integer
             [Movie || {_id, Movie} <- ets:tab2list(Table),
-              Movie#movie_data.avg_vote >= float_to_list(list_to_integer(SearchVal) - 0.5),
+              Movie#movie_data.avg_vote >= float_to_list(list_to_integer(SearchVal) - 0.6),
               Movie#movie_data.avg_vote < float_to_list(list_to_integer(SearchVal) + 0.5)]
         end;
       "Budget" ->
