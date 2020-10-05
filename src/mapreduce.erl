@@ -70,9 +70,17 @@ map(Table, Query = #query{type = generic, searchVal = SearchVal}) ->
       "Description" ->
         [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.description, SearchVal) > 0];
       % note: range of +-0.5
-      "Score" -> [Movie || {_id, Movie} <- ets:tab2list(Table),
-        list_to_float(Movie#movie_data.metascore) > list_to_float(SearchVal) - 0.5,
-        list_to_float(Movie#movie_data.metascore) < list_to_float(SearchVal) + 0.5];
+      "Score" ->
+        case string:str(SearchVal, ".") > 0 of
+          true -> % it's a float
+            [Movie || {_id, Movie} <- ets:tab2list(Table),
+              Movie#movie_data.metascore > float_to_list(list_to_float(SearchVal) - 0.5),
+              Movie#movie_data.metascore < float_to_list(list_to_float(SearchVal) + 0.5)];
+          false -> % it's an integer
+            [Movie || {_id, Movie} <- ets:tab2list(Table),
+              Movie#movie_data.metascore > integer_to_list(list_to_integer(SearchVal) - 0.5),
+              Movie#movie_data.metascore < integer_to_list(list_to_integer(SearchVal) + 0.5)]
+        end;
       "Budget" ->
         [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.budget, SearchVal) > 0];
       _ -> []
@@ -124,116 +132,6 @@ reduce(MappedList, Query = #query{type = generic}) ->
                          end,
 
   [Fun_moviedata_reduce(Movie, Query) || Movie = #movie_data{} <- MappedList];
-
-%%  [#movie_data{id = Movie#movie_data.id, title = Movie#movie_data.title,
-%%    original_title = (fun() -> case Query#query.resultCategory#movie_data.original_title == true of
-%%                                 true -> Movie#movie_data.original_title;
-%%                                 false -> ""
-%%                               end end),
-%%    year = (fun() -> case Query#query.resultCategory#movie_data.year == true of
-%%                       true -> Movie#movie_data.year;
-%%                       false -> ""
-%%                     end end),
-%%    date_published = (fun() -> case Query#query.resultCategory#movie_data.date_published == true of
-%%                                 true -> Movie#movie_data.date_published;
-%%                                 false -> ""
-%%                               end end),
-%%    genre = (fun() -> case Query#query.resultCategory#movie_data.genre == true of
-%%                        true -> Movie#movie_data.genre;
-%%                        false -> ""
-%%                      end end),
-%%    duration = (fun() -> case Query#query.resultCategory#movie_data.duration == true of
-%%                           true -> Movie#movie_data.duration;
-%%                           false -> ""
-%%                         end end),
-%%    country = (fun() -> case Query#query.resultCategory#movie_data.country == true of
-%%                          true -> Movie#movie_data.country;
-%%                          false -> ""
-%%                        end end),
-%%    language = (fun() -> case Query#query.resultCategory#movie_data.language == true of
-%%                           true -> Movie#movie_data.language;
-%%                           false -> ""
-%%                         end end),
-%%    director = (fun() -> case Query#query.resultCategory#movie_data.director == true of
-%%                           true -> Movie#movie_data.director;
-%%                           false -> ""
-%%                         end end),
-%%    writer = (fun() -> case Query#query.resultCategory#movie_data.writer == true of
-%%                         true -> Movie#movie_data.writer;
-%%                         false -> ""
-%%                       end end),
-%%    production_company = (fun() -> case Query#query.resultCategory#movie_data.production_company == true of
-%%                                     true -> Movie#movie_data.production_company;
-%%                                     false -> ""
-%%                                   end end),
-%%    actors = (fun() -> case Query#query.resultCategory#movie_data.actors == true of
-%%                         true -> Movie#movie_data.actors;
-%%                         false -> ""
-%%                       end end),
-%%    avg_vote = (fun() -> case Query#query.resultCategory#movie_data.avg_vote == true of
-%%                           true -> Movie#movie_data.avg_vote;
-%%                           false -> ""
-%%                         end end),
-%%    votes = (fun() -> case Query#query.resultCategory#movie_data.votes == true of
-%%                        true -> Movie#movie_data.votes;
-%%                        false -> ""
-%%                      end end),
-%%    budget = (fun() -> case Query#query.resultCategory#movie_data.budget == true of
-%%                         true -> Movie#movie_data.budget;
-%%                         false -> ""
-%%                       end end),
-%%    usa_gross_income = (fun() -> case Query#query.resultCategory#movie_data.budget == true of
-%%                                   true -> Movie#movie_data.budget;
-%%                                   false -> ""
-%%                                 end end),
-%%    worlwide_gross_income = (fun() -> case Query#query.resultCategory#movie_data.budget == true of
-%%                                        true -> Movie#movie_data.budget;
-%%                                        false -> ""
-%%                                      end end),
-%%    metascore = (fun() -> case Query#query.resultCategory#movie_data.budget == true of
-%%                            true -> Movie#movie_data.budget;
-%%                            false -> ""
-%%                          end end),
-%%    reviews_from_users = (fun() -> case Query#query.resultCategory#movie_data.budget == true of
-%%                                     true -> Movie#movie_data.budget;
-%%                                     false -> ""
-%%                                   end end),
-%%    reviews_from_critics = (fun() -> case Query#query.resultCategory#movie_data.budget == true of
-%%                                       true -> Movie#movie_data.budget;
-%%                                       false -> ""
-%%                                     end end)}
-%%    || Movie = #movie_data{} <- MappedList].
-
-% TODO: delete it if the gui works well...
-%%  case Query#query.resultCategory of
-%%    "All" -> MappedList;
-%%    "Title" -> [#reduced_data{id = X, title = Y, categoryInfo = Y} || #movie_data{id = X, title = Y} <- MappedList];
-%%    "Year" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, year = Z} <- MappedList];
-%%    "Genre" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, genre = Z} <- MappedList];
-%%    "Duration" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, duration = Z} <- MappedList];
-%%    "Country" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, country = Z} <- MappedList];
-%%    "Language" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, language = Z} <- MappedList];
-%%    "Director" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, director = Z} <- MappedList];
-%%    "Writer" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, writer = Z} <- MappedList];
-%%    "Production Company" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, production_company = Z} <- MappedList];
-%%    "Actor" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, actors = Z} <- MappedList];
-%%    "Description" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, description = Z} <- MappedList];
-%%    "Score" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, metascore = Z} <- MappedList];
-%%    "Budget" ->
-%%      [#reduced_data{id = X, title = Y, categoryInfo = Z} || #movie_data{id = X, title = Y, budget = Z} <- MappedList];
-%%    "Number of results" -> #numOfResults{number = countList(MappedList)}
-%%  end.
 
 % OTHER reduce - ????
 reduce(_MappedList, _Query = #query{}) ->
