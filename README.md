@@ -1,7 +1,7 @@
 # Project-Ilay-Omer - Mapreduce IMDb in erlang
  This is the final project of "Functional programming in concurrent and distributed systems", by Ilay and Omer
  
-- ### Description:
+- ### General Info:
  
  The main purpose of the project is to implement a map-reduce algorithm for iMDB. 
  
@@ -10,7 +10,7 @@
  
  *clients* can be created in any computer/terminal and ask for different kinds of queries from the *master* node. The answer will be delivered from each *server* (which contains different records), to the *master* and then the master will group them into one result which will be sent back to the client.
 
-- ### R:
+- ### How to Run:
 
  To run ***server***, write the server's name in *@serverslist.txt* - *server#@ip*
  then at each server write the following line on terminal:
