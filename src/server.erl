@@ -7,7 +7,7 @@
 %%% Created : 01. Oct 2020 15:33
 %%%-------------------------------------------------------------------
 -module(server).
--author("Omer").
+-author("Ilay-Omer").
 
 -behaviour(gen_server).
 
@@ -40,7 +40,7 @@
 %% Create a preprocessor
 -define(MOVIE_RECORD, record_info(fields, movie_data)).
 %%%===================================================================
-%%% API
+%%%                             API
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
@@ -52,7 +52,7 @@ start_link() ->
 
 
 %%%===================================================================
-%%% gen_server callbacks
+%%%                    gen_server callbacks
 %%%===================================================================
 
 %% @private
@@ -65,6 +65,8 @@ init([]) ->
   gen_server:cast({masterpid, list_to_atom(MasterNode)}, {nodeup, node()}),
   {ok, #server_state{}}.
 
+
+%%% ----------------------------- Handle Call -----------------------------
 %% @private
 %% @doc Handling call messages
 -spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
@@ -91,6 +93,7 @@ handle_call(_Request, _From, State = #server_state{}) ->
   {reply, ok, State}.
 
 
+%%% ----------------------------- Handle Cast -----------------------------
 %% @private
 %% @doc Handling cast messages
 -spec(handle_cast(Request :: term(), State :: #server_state{}) ->
@@ -110,6 +113,8 @@ handle_cast({store, Data}, State = #server_state{}) ->
 handle_cast(_Request, State = #server_state{}) ->
   {noreply, State}.
 
+
+%%% ----------------------------- Handle Info -----------------------------
 %% @private
 %% @doc Handling all non call/cast messages
 -spec(handle_info(Info :: timeout() | term(), State :: #server_state{}) ->
@@ -138,7 +143,7 @@ code_change(_OldVsn, State = #server_state{}, _Extra) ->
   {ok, State}.
 
 %%%===================================================================
-%%% Internal functions
+%%%                      Internal functions
 %%%===================================================================
 
 %% saveData - saving data into ets

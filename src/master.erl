@@ -23,7 +23,7 @@
 -record(master_state, {servers = {0,[]}}).
 -record(query, {type, searchVal, searchCategory, resultCategory}).
 %%%===================================================================
-%%% API
+%%%                             API
 %%%===================================================================
 
 %% @doc Spawns the server and registers the local name (unique)
@@ -35,7 +35,7 @@ start_link() ->
 
 
 %%%===================================================================
-%%% gen_server callbacks
+%%%                   gen_server callbacks
 %%%===================================================================
 
 %% @private
@@ -50,6 +50,8 @@ init([]) ->
   ServersInfo = dataDistributor:distribute(),
   {ok, #master_state{servers = ServersInfo}}.
 
+
+%%% ----------------------------- Handle Call -----------------------------
 %% @private
 %% @doc Handling call messages
 -spec(handle_call(Request :: term(), From :: {pid(), Tag :: term()},
@@ -69,6 +71,8 @@ handle_call(Query = #query{}, {FromPID, _Tag}, State = #master_state{}) ->
 handle_call(_Request, _From, State = #master_state{}) ->
   {reply, ok, State}.
 
+
+%%% ----------------------------- Handle Cast -----------------------------
 %% @private
 %% @doc Handling cast messages
 -spec(handle_cast(Request :: term(), State :: #master_state{}) ->
@@ -93,6 +97,7 @@ handle_cast(_Request, State = #master_state{}) ->
   {noreply, State}.
 
 
+%%% ----------------------------- Handle Info -----------------------------
 %% @private
 %% @doc Handling all non call/cast messages
 -spec(handle_info(Info :: timeout() | term(), State :: #master_state{}) ->
@@ -134,23 +139,26 @@ code_change(_OldVsn, State = #master_state{}, _Extra) ->
   {ok, State}.
 
 %%%===================================================================
-%%% Internal functions
+%%%                       Internal functions
 %%%===================================================================
-
+%% sendQuery - sends the query to the servers and returns the client the answer
 sendQuery(Query = #query{}, FromPID, NumOfServers, Servers) ->
   Result = sendQuery(Query, Servers, NumOfServers),
   io:format("Received final result *** ~p *** at ~p, sending it to ~p~n", [Result, self(), FromPID]),
   FromPID ! Result.
 
+%% sendQuery - sent to all servers, now wait till you gather all the results
 sendQuery(_Query = #query{}, [], NumberOfServers) ->
   gather(NumberOfServers);
 
+%% sendQuery - send each server a job by a special pid
 sendQuery(Query = #query{}, [Server0 | T], _NumberOfServers) ->
   Self = self(),
   PID = spawn(fun() -> sendServerJob(Self, Query, Server0) end),
   io:format("Entered sendQuery function and ~p spawned process ~p for server ~p~n", [self(), PID, Server0]),
   sendQuery(Query, T, _NumberOfServers).
 
+%% sendServerJob - each pid will return the answer which given by the server, to his parentPID
 sendServerJob(ParentPID, Query = #query{}, Server) ->
   % sending from gen_server the values of the data
   gen_server:call({serverpid, Server}, Query),

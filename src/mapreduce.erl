@@ -24,14 +24,6 @@
   metascore, reviews_from_users, reviews_from_critics}).
 -record(numOfResults, {number}).
 
-
-%%-record(reduced_data, {id, title, categoryInfo = #movie_reduced{}}).
-%%-record(movie_reduced, {original_title, year,
-%%  date_published, genre, duration, country, language, director,
-%%  writer, production_company, actors, description, avg_vote,
-%%  votes, budget, usa_gross_income, worlwide_gross_income,
-%%  metascore, reviews_from_users, reviews_from_critics}).
-
 %% API
 -export([get/2]).
 
@@ -93,6 +85,7 @@ map(_Table, _Query = #query{}) ->
 %% reduce -
 % generic reduce - taking only the resultCategory.
 reduce(MappedList, Query = #query{type = generic}) ->
+  %% each element in list will be construct fromt he query.resultCategory section
   [#movie_data{id = Movie#movie_data.id, title = Movie#movie_data.title,
     original_title = (fun() -> case Query#query.resultCategory#movie_data.original_title == true of
                                  true -> Movie#movie_data.original_title;
@@ -172,7 +165,7 @@ reduce(MappedList, Query = #query{type = generic}) ->
                                      end end)}
     || Movie = #movie_data{} <- MappedList].
 
-
+% TODO: delete it if the gui works well...
 %%  case Query#query.resultCategory of
 %%    "All" -> MappedList;
 %%    "Title" -> [#reduced_data{id = X, title = Y, categoryInfo = Y} || #movie_data{id = X, title = Y} <- MappedList];

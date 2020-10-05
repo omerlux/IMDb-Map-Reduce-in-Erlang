@@ -14,7 +14,7 @@
 
 
 %% distribute - distributing the CSV file rows to each server.
-%% NOTE: for now, there aren't any duplicated data..
+%% note: there aren't any duplicated data. the data is being shuffled
 distribute() ->
   Start = os:timestamp(),
   CSV_unshuffled = parse_csv:main(["../csvexample.csv"]),   % getting csv file
@@ -33,15 +33,6 @@ distribute() ->
 readfile(FileName) ->
   {ok, Binary} = file:read_file(FileName),
   string:tokens(erlang:binary_to_list(Binary), "\r\n").
-
-
-%%%% countList - returning the number of string elements in the list
-%%countList([_ | T]) ->
-%%  count(1, T).
-%%count(X, [_ | T]) ->
-%%  count(X + 1, T);
-%%count(X, []) ->
-%%  X.
 
 
 %% sendData - sending data to all servers
