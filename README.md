@@ -13,8 +13,9 @@
 - ### Thechnical Overview:
 
 <div style="overflow:hidden;">
-    <div id="myDiv" style="overflow:hidden;margin-top:-30px"></div>
- <img src="https://disco.readthedocs.io/en/latest/_images/disco-arch.png">
+    <div id="myDiv" style="overflow:hidden;margin-top:-30px">
+  <img src="https://disco.readthedocs.io/en/latest/_images/disco-arch.png">
+ </div>
 </div>
 
 <p style="height: 20px; overflow: hidden" align="center">
