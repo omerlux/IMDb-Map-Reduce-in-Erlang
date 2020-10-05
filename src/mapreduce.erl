@@ -132,7 +132,7 @@ reduce(MappedList, Query = #query{type = generic}) ->
       reviews_from_critics = Fun_value(Query#query.resultCategory#movie_data.reviews_from_critics, Movie#movie_data.reviews_from_critics)}
                          end,
 
-  [Fun_moviedata_reduce(Movie) || Movie = #movie_data{} <- MappedList].
+  [Fun_moviedata_reduce(Movie, Query) || Movie = #movie_data{} <- MappedList].
 
 %%  [#movie_data{id = Movie#movie_data.id, title = Movie#movie_data.title,
 %%    original_title = (fun() -> case Query#query.resultCategory#movie_data.original_title == true of
