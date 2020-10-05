@@ -20,6 +20,12 @@ We built the system as the Disco-Project system supposed to be:
 
 - ### How to Run:
 
+First in every computer, run compilation in erlang shell:
+```
+erl
+c(master). c(server). c(wxclient). c(parse_csv). c(dataDistributor). 
+```
+
  To run ***server***, write the server's name in *@serverslist.txt* - *server#@ip*
  then at each server write the following line on terminal:
 ```
