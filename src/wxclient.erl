@@ -31,7 +31,7 @@ start() ->
 
   %%note: Frame and components build -----------------------------------------------------------------------------------
   WX = wx:new(),
-  Frame = wxFrame:new(WX, 1, "IMDb Map-Reduce Project"), %%TODO whats the difference from Panel?
+  Frame = wxFrame:new(WX, 1, "IMDb Map-Reduce Project"),
   MainSizer = wxBoxSizer:new(?wxVERTICAL),
   SubSizer1 = wxBoxSizer:new(?wxVERTICAL),
   TopTxt = wxStaticText:new(Frame, ?wxID_ANY, "Query Window"),
