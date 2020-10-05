@@ -144,7 +144,7 @@ code_change(_OldVsn, State = #master_state{}, _Extra) ->
 %% sendQuery - sends the query to the servers and returns the client the answer
 sendQuery(Query = #query{}, FromPID, NumOfServers, Servers) ->
   Result = sendQuery(Query, Servers, NumOfServers),
-  io:format("Received final result *** ~p *** at ~p, sending it to ~p~n", [Result, self(), FromPID]),
+  io:format("Received final result at ~p, sending it to ~p~n", [self(), FromPID]),
   FromPID ! Result.
 
 %% sendQuery - sent to all servers, now wait till you gather all the results
@@ -176,37 +176,6 @@ gather(ExpectedResults) ->
   io:format("Entered gather function expecting ~p results ~n", [ExpectedResults]),
   receive
     Result ->
-      io:format("Received result ~p at ~p~n", [Result, self()]),
+      io:format("Received result at ~p~n", [self()]),
       Result ++ gather(ExpectedResults - 1)
   end.
-
-%%%% readfile - read file as strings separated by lines
-%%readfile(FileName) ->
-%%  {ok, Binary} = file:read_file(FileName),
-%%  string:tokens(erlang:binary_to_list(Binary), "\r\n").
-%%
-%%%% countList - returning the number of string elements in the list
-%%countList([_ | T]) ->
-%%  count(1, T).
-%%count(X, [_ | T]) ->
-%%  count(X + 1, T);
-%%count(X, []) ->
-%%  X.
-
-%%%% Fibonacci recursions part:
-%%%% returns the N'th fibonacci number
-%%%% normal recursion:
-%%fiboR(1) -> 1;
-%%fiboR(2) -> 1;
-%%fiboR(N) -> fiboR(N - 1) + fiboR(N - 2).
-%%
-%%%% Tail recursion:
-%%fiboT(1) -> 1;
-%%fiboT(2) -> 1;
-%%fiboT(N) -> fiboTail(N, 1, 1).
-%%fiboTail(3, _Arg1, _Arg2) -> _Arg1 + _Arg2;
-%%fiboTail(N, _Arg1, _Arg2) -> fiboTail(N - 1, _Arg2, _Arg2 + _Arg1).
-%%
-%%%% The tail recursion runs much faster. as we saw in class, normal recursion requires a chain of resources during evaluation
-%%%% on the other hand, tail recursion transforms the linear process of recursion into iterative one,
-%%%% by “carrying” the partial answers along the way and it makes the whole process much faster.

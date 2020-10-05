@@ -32,8 +32,12 @@ distribute() ->
 
 %% readfile - read file as strings separated by lines
 readfile(FileName) ->
-  {ok, Binary} = file:read_file(FileName),
-  string:tokens(erlang:binary_to_list(Binary), "\r\n").
+  try
+    {ok, Binary} = file:read_file(FileName),
+    string:tokens(erlang:binary_to_list(Binary), "\r\n")
+  catch
+    error: _Error -> {os:system_time(), error, "Cannot read the csv file"}
+  end.
 
 
 %% sendData - sending data to all servers
