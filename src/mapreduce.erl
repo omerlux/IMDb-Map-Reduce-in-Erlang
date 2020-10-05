@@ -23,7 +23,7 @@
   searchCategory,
   resultCategory = #movie_data{}
 }).
--record(numOfResults, {number}).
+%%-record(numOfResults, {number}).
 
 %% API
 -export([get/2]).
@@ -51,7 +51,7 @@ map(Table, Query = #query{type = generic, searchVal = SearchVal}) ->
         [Movie || {_id, Movie} <- ets:tab2list(Table), Movie#movie_data.year == SearchVal];
       "Genre" ->
         [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.genre, SearchVal) > 0];
-      % note: try that... (range of +-5)
+      % note: range of +-5
       "Duration" -> [Movie || {_id, Movie} <- ets:tab2list(Table),
         list_to_integer(Movie#movie_data.duration) > list_to_integer(SearchVal) - 5,
         list_to_integer(Movie#movie_data.duration) < list_to_integer(SearchVal) + 5];
@@ -69,8 +69,10 @@ map(Table, Query = #query{type = generic, searchVal = SearchVal}) ->
         [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.actors, SearchVal) > 0];
       "Description" ->
         [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.description, SearchVal) > 0];
-      "Score" ->
-        [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.title, SearchVal) > 0];
+      % note: range of +-0.5
+      "Score" -> [Movie || {_id, Movie} <- ets:tab2list(Table),
+        list_to_float(Movie#movie_data.metascore) > list_to_float(SearchVal) - 0.5,
+        list_to_float(Movie#movie_data.metascore) < list_to_float(SearchVal) + 0.5];
       "Budget" ->
         [Movie || {_id, Movie} <- ets:tab2list(Table), string:str(Movie#movie_data.budget, SearchVal) > 0];
       _ -> []
@@ -86,20 +88,8 @@ map(_Table, _Query = #query{}) ->
 %% reduce -
 % generic reduce - taking only the resultCategory.
 reduce(MappedList, Query = #query{type = generic}) ->
-  %% each element in list will be construct fromt he query.resultCategory section
+  %% each element in list will be construct from the query.resultCategory section
 
-  % note: after success try, delete it
-%%  Fun_value = fun(Category, Condition, Value) ->
-%%    case Condition of
-%%      true -> Value;
-%%      false -> ""
-%%    end
-%%    end,
-%%  Fun_moviedata_reduce = fun(Hey = #hey{}) ->
-%%    Hey_ans = #hey{a = Fun_value(a, false, Hey#hey.a),
-%%      b = Fun_value(b, true, Hey#hey.b),
-%%      c = Fun_value(c, false, Hey#hey.c)}
-%%                         end,
   %% mapping the wanted values -
   % Condition is the resultCategory#movie_data.CATEGORY value
   % Value is the value we want to insert the table
@@ -109,31 +99,31 @@ reduce(MappedList, Query = #query{type = generic}) ->
       false -> ""
     end
               end,
-  Fun_moviedata_reduce = fun(Movie = #movie_data{}, Query) ->
+  Fun_moviedata_reduce = fun(Movie = #movie_data{}, Query2) ->
     #movie_data{id = Movie#movie_data.id, title = Movie#movie_data.title,
-      original_title = Fun_value(Query#query.resultCategory#movie_data.original_title, Movie#movie_data.original_title),
-      year = Fun_value(Query#query.resultCategory#movie_data.year, Movie#movie_data.year),
-      date_published = Fun_value(Query#query.resultCategory#movie_data.date_published, Movie#movie_data.date_published),
-      genre = Fun_value(Query#query.resultCategory#movie_data.genre, Movie#movie_data.genre),
-      duration = Fun_value(Query#query.resultCategory#movie_data.duration, Movie#movie_data.duration),
-      country = Fun_value(Query#query.resultCategory#movie_data.country, Movie#movie_data.country),
-      language = Fun_value(Query#query.resultCategory#movie_data.language, Movie#movie_data.language),
-      director = Fun_value(Query#query.resultCategory#movie_data.director, Movie#movie_data.director),
-      writer = Fun_value(Query#query.resultCategory#movie_data.writer, Movie#movie_data.writer),
-      production_company = Fun_value(Query#query.resultCategory#movie_data.production_company, Movie#movie_data.production_company),
-      actors = Fun_value(Query#query.resultCategory#movie_data.actors, Movie#movie_data.actors),
-      description = Fun_value(Query#query.resultCategory#movie_data.description, Movie#movie_data.description),
-      avg_vote = Fun_value(Query#query.resultCategory#movie_data.avg_vote, Movie#movie_data.avg_vote),
-      votes = Fun_value(Query#query.resultCategory#movie_data.votes, Movie#movie_data.votes),
-      budget = Fun_value(Query#query.resultCategory#movie_data.budget, Movie#movie_data.budget),
-      usa_gross_income = Fun_value(Query#query.resultCategory#movie_data.usa_gross_income, Movie#movie_data.usa_gross_income),
-      worlwide_gross_income = Fun_value(Query#query.resultCategory#movie_data.worlwide_gross_income, Movie#movie_data.worlwide_gross_income),
-      metascore = Fun_value(Query#query.resultCategory#movie_data.metascore, Movie#movie_data.metascore),
-      reviews_from_users = Fun_value(Query#query.resultCategory#movie_data.reviews_from_users, Movie#movie_data.reviews_from_users),
-      reviews_from_critics = Fun_value(Query#query.resultCategory#movie_data.reviews_from_critics, Movie#movie_data.reviews_from_critics)}
+      original_title = Fun_value(Query2#query.resultCategory#movie_data.original_title, Movie#movie_data.original_title),
+      year = Fun_value(Query2#query.resultCategory#movie_data.year, Movie#movie_data.year),
+      date_published = Fun_value(Query2#query.resultCategory#movie_data.date_published, Movie#movie_data.date_published),
+      genre = Fun_value(Query2#query.resultCategory#movie_data.genre, Movie#movie_data.genre),
+      duration = Fun_value(Query2#query.resultCategory#movie_data.duration, Movie#movie_data.duration),
+      country = Fun_value(Query2#query.resultCategory#movie_data.country, Movie#movie_data.country),
+      language = Fun_value(Query2#query.resultCategory#movie_data.language, Movie#movie_data.language),
+      director = Fun_value(Query2#query.resultCategory#movie_data.director, Movie#movie_data.director),
+      writer = Fun_value(Query2#query.resultCategory#movie_data.writer, Movie#movie_data.writer),
+      production_company = Fun_value(Query2#query.resultCategory#movie_data.production_company, Movie#movie_data.production_company),
+      actors = Fun_value(Query2#query.resultCategory#movie_data.actors, Movie#movie_data.actors),
+      description = Fun_value(Query2#query.resultCategory#movie_data.description, Movie#movie_data.description),
+      avg_vote = Fun_value(Query2#query.resultCategory#movie_data.avg_vote, Movie#movie_data.avg_vote),
+      votes = Fun_value(Query2#query.resultCategory#movie_data.votes, Movie#movie_data.votes),
+      budget = Fun_value(Query2#query.resultCategory#movie_data.budget, Movie#movie_data.budget),
+      usa_gross_income = Fun_value(Query2#query.resultCategory#movie_data.usa_gross_income, Movie#movie_data.usa_gross_income),
+      worlwide_gross_income = Fun_value(Query2#query.resultCategory#movie_data.worlwide_gross_income, Movie#movie_data.worlwide_gross_income),
+      metascore = Fun_value(Query2#query.resultCategory#movie_data.metascore, Movie#movie_data.metascore),
+      reviews_from_users = Fun_value(Query2#query.resultCategory#movie_data.reviews_from_users, Movie#movie_data.reviews_from_users),
+      reviews_from_critics = Fun_value(Query2#query.resultCategory#movie_data.reviews_from_critics, Movie#movie_data.reviews_from_critics)}
                          end,
 
-  [Fun_moviedata_reduce(Movie, Query) || Movie = #movie_data{} <- MappedList].
+  [Fun_moviedata_reduce(Movie, Query) || Movie = #movie_data{} <- MappedList];
 
 %%  [#movie_data{id = Movie#movie_data.id, title = Movie#movie_data.title,
 %%    original_title = (fun() -> case Query#query.resultCategory#movie_data.original_title == true of
@@ -245,10 +235,8 @@ reduce(MappedList, Query = #query{type = generic}) ->
 %%    "Number of results" -> #numOfResults{number = countList(MappedList)}
 %%  end.
 
-%% countList - returning the number of string elements in the list
-countList([_ | T]) ->
-  count(1, T).
-count(X, [_ | T]) ->
-  count(X + 1, T);
-count(X, []) ->
-  X.
+% OTHER reduce - ????
+reduce(_MappedList, _Query = #query{}) ->
+  % DO SOMETHING...
+  anotherquery.
+

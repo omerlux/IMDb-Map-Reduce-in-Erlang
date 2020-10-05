@@ -180,18 +180,18 @@ gather(ExpectedResults) ->
       Result ++ gather(ExpectedResults - 1)
   end.
 
-%% readfile - read file as strings separated by lines
-readfile(FileName) ->
-  {ok, Binary} = file:read_file(FileName),
-  string:tokens(erlang:binary_to_list(Binary), "\r\n").
-
-%% countList - returning the number of string elements in the list
-countList([_ | T]) ->
-  count(1, T).
-count(X, [_ | T]) ->
-  count(X + 1, T);
-count(X, []) ->
-  X.
+%%%% readfile - read file as strings separated by lines
+%%readfile(FileName) ->
+%%  {ok, Binary} = file:read_file(FileName),
+%%  string:tokens(erlang:binary_to_list(Binary), "\r\n").
+%%
+%%%% countList - returning the number of string elements in the list
+%%countList([_ | T]) ->
+%%  count(1, T).
+%%count(X, [_ | T]) ->
+%%  count(X + 1, T);
+%%count(X, []) ->
+%%  X.
 
 %%%% Fibonacci recursions part:
 %%%% returns the N'th fibonacci number
