@@ -21,8 +21,7 @@
   metascore, reviews_from_users, reviews_from_critics}).
 -record(query, {type, searchVal, searchCategory, resultCategory}).
 
-%% note======================================= TODO: =============================================
-%% 2. Add the number of result for every query, not related to the "Number of results" option
+%% note===========================================================================================
 %% note===========================================================================================
 
 
@@ -115,8 +114,7 @@ handle_click_event(A = #wx{}, _B) ->
   Query = #query{type = generic,
     searchVal = wxTextCtrl:getValue(TextBox),
     searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)), resultCategory = Categories2Show},
-  [MasterNode | _T] = readfile(["clientslist.txt"]), %%TODO had a problem reading the file...
-  %%MasterNode = "master@DESKTOP-3NPJUSA",
+  [MasterNode | _T] = readfile(["clientslist.txt"]),
   _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query),
   receive
   %% ************* Handling Query Results: *******************
