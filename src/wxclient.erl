@@ -34,12 +34,7 @@ start() ->
   Window = wxWindow:new(Frame, ?wxID_ANY),
 
   MainSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame),
-%%  LogoSizer = wxBoxSizer:new(?wxVERTICAL,Frame),
-%%  QuerySizer = wxBoxSizer:new(?wxVERTICAL,Frame),
   ButtonSizer = wxStaticBoxSizer:new(?wxHORIZONTAL, Frame),
-  %%SortSizer = wxStaticBoxSizer:new(?wxVERTICAL,Frame,[{label, "Select Sorting Category:"}]),
-  %%CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame, [{label, "Select Categories (ID, Title are always selected):"}]),
-  %%CheckSizer = wxBoxSizer:new(?wxVERTICAL),
   Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value (case-sensitive):"),
   Headline2 = wxStaticText:new(Frame, ?wxID_ANY, "Select Categories (ID, Title are always selected):"),
   Headline3 = wxStaticText:new(Frame, ?wxID_ANY, "Select Sorting Category:"),
@@ -47,7 +42,6 @@ start() ->
   TextCtrlValidation = wxStaticText:new(Frame, ?wxID_ANY, ""),
   ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
   ListBox = wxListBox:new(Frame, ?wxID_ANY, [{size, {-1, 100}}, {choices, Choices}, {style, ?wxLB_SINGLE}]),
-  %%CheckPanel = wxPanel:new(Window,[]),
   CheckBoxes =
     [wxCheckBox:new(Frame, 1, "Duration", []),
       wxCheckBox:new(Frame, 2, "Genre", []),
@@ -75,7 +69,7 @@ start() ->
 
   %%--------------------- Setting Components Properties -------------------------------------------------------------------
   wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here (case-sensitive)"),
-  wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
+  wxButton:setToolTip(ButtonSend, "Send your query to the master"),
   wxListBox:setToolTip(ListBox, "Choose your search value category"),
   wxListBox:setToolTip(ListBoxSort, "Sort by"),
   wxWindow:setLabel(Window, "IMDb Map-Reduce Project"),
@@ -98,19 +92,13 @@ start() ->
     wxCheckBox:setForegroundColour(Item, {255, 200, 0}) end, %%Adding checkboxes to the sizer
   wx:foreach(Fun, CheckBoxes),
 
-%%  wxSizer:add(MainSizer, LogoSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-%%  wxSizer:add(MainSizer, QuerySizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-%%  wxSizer:add(MainSizer, ButtonSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-
   wxSizer:add(MainSizer, Headline3, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(MainSizer, ListBoxSort, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(ButtonSizer, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
   wxSizer:add(ButtonSizer, TextCtrlValidation, [{flag, ?wxALL}, {border, 8}]),
-%%  wxSizer:add(MainSizer, CheckSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-%%  wxSizer:add(MainSizer, SortSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   wxSizer:add(MainSizer, ButtonSizer, [{flag, ?wxTOP bor ?wxLEFT bor ?wxRIGHT bor ?wxEXPAND}, {border, 8}]),
 
-%%  %%Event configuration for button click:
+%% Event configuration for button click:
   wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
     {userData, {wx:get_env(), TextCtrl, ListBox, CheckBoxes, TextCtrlValidation, ListBoxSort}}]),
 
@@ -120,7 +108,7 @@ start() ->
 handle_click_event(A = #wx{}, _B) ->
   {Env, TextBox, ListBox, CheckBoxes, TextCtrlValidation, ListBoxSort} = A#wx.userData,
   wx:set_env(Env),
-  %%Create the resultCategory true/false tuple:
+  %% Create the resultCategory true/false tuple:
   Categories2Show = #movie_data{
     id = true,
     title = true,
@@ -197,8 +185,13 @@ handle_click_event(A = #wx{}, _B) ->
       StartTime = os:timestamp(),%% for performance evaluation
       try
         gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
+        Self = self(),
+        register(monitormasterpid, monitorMaster(Self, MasterNode)),
         receive
         %% ************* Handling Query Results Here: *******************
+          masterdown ->
+            wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
+            wxTextCtrl:setLabel(TextCtrlValidation, "The master is down");
           [] ->
             WindowZero = wxWindow:new(),
             FrameZero = wxFrame:new(WindowZero, ?wxID_ANY, "No Results"),
@@ -221,6 +214,10 @@ handle_click_event(A = #wx{}, _B) ->
             Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
               ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
             Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
+
+            %% Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics),
+
+
             Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
             Image3 = wxImage:new("results.png", []),
             Bitmap3 = wxBitmap:new(wxImage:scale(Image3, round(wxImage:getWidth(Image3) * 0.345), round(wxImage:getHeight(Image3) * 0.345), [{quality, ?wxIMAGE_QUALITY_HIGH}])),
@@ -229,9 +226,11 @@ handle_click_event(A = #wx{}, _B) ->
             wxWindow:setSize(Frame2, 0, 0, 500, 500),
             wxWindow:setBackgroundColour(Frame2, {40, 40, 40}),
             wxStaticText:setForegroundColour(Headline, {255, 200, 0}),
+            %%wxStaticText:setForegroundColour(Headline2, {255, 200, 0}),
             wxFrame:center(Frame2),
             wxSizer:add(MainSizer, StaticBitmap3, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
             wxSizer:add(MainSizer, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+            %% wxSizer:add(MainSizer, Headline2, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
             Options = [{flag, ?wxEXPAND}, {proportion, 1}],
             wxSizer:add(MainSizer, Grid, Options),
             wxWindow:setSizer(Frame2, MainSizer),
@@ -243,14 +242,15 @@ handle_click_event(A = #wx{}, _B) ->
             wxStaticText:new(Frame2, ?wxID_ANY, "An error occured."),
             wxFrame:show(Frame2),
             wxWindow:show(Window2)
-        end
+        end,
+        monitormasterpid ! shutdown
       catch
-        _:_-> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
-          wxTextCtrl:setLabel(TextCtrlValidation, "The master is down")
+        _:{A, B, C} -> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
+          wxTextCtrl:setLabel(TextCtrlValidation, "The master is down2" ++ A ++ B ++ C)
       end;
-        false -> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
-          wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
-      end.
+    false -> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
+      wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
+  end.
 
 
 %% Creating the result's table
@@ -451,6 +451,16 @@ getValueForSorting(Movie = #movie_data{}, SortParam) ->
     SortParam == 12 -> Movie#movie_data.avg_vote;
     SortParam == 13 -> Movie#movie_data.budget;
     true -> Movie#movie_data.title
+  end.
+
+%% Function for a process which monitors the master node status, and informs the client if the master node is down
+monitorMaster(FromPID, MasterNode) ->
+  gen_server:cast({masterpid, MasterNode},ping),
+  net_kernel:monitor_nodes(true),
+  receive
+    {nodedown, MasterNode} -> FromPID ! masterdown;
+    shutdown -> void;
+    _ -> monitorMaster(FromPID, MasterNode)
   end.
 
 

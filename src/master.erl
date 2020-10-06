@@ -118,6 +118,7 @@ handle_info({nodedown, Node}, State = #master_state{}) ->
 
 %% Handle_info - all other requests
 handle_info(_Info, State = #master_state{}) ->
+  io:format("Message received: ~p~n", [_Info]),
   {noreply, State}.
 
 %% @private

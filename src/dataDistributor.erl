@@ -17,7 +17,7 @@
 %% note: there aren't any duplicated data. the data is being shuffled
 distribute() ->
   Start = os:timestamp(),
-  CSV_unshuffled = parse_csv:main(["../movies1000.csv"]),   % getting csv file
+  CSV_unshuffled = parse_csv:main(["../IMDb movies.csv"]),   % getting csv file
   CSV = [Y || {_,Y} <- lists:sort([{rand:uniform(), N} || N <- CSV_unshuffled])], % shuffling it randomly
   NumRows = lists:flatlength(CSV) - 1,
   Servers = checkAlive(readfile(["serverslist.txt"]), []),
