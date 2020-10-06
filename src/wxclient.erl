@@ -25,29 +25,29 @@
 %% will send the query on button pressing
 start() ->
 
-  %%--------------------- Frame and components build -------------------------------------------------------------------
-  WX = wx:new(),
-  Frame = wxFrame:new(WX, 1, "IMDb Map-Reduce Project"),
-  MainSizer = wxBoxSizer:new(?wxVERTICAL),
-%%  Panel = wxPanel:new(Frame, []),
-%%  wxPanel:setSizer(Panel, MainSizer),
-%%  wxPanel:setBackgroundColour(Panel,?wxBLACK),
-  SubSizer1 = wxBoxSizer:new(?wxVERTICAL),
-%%  Logo = wxBitmap:new("../images/imdb logo.png"),
-%%  wxSizer:add(MainSizer, Logo),
-  TopTxt = wxStaticText:new(Frame, ?wxID_ANY, "Query Window"),
-  Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value (case-sensitive):"),
-  TextCtrl = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
-  wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here (case-sensitive)"),
-  TextCtrlValidation = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
-  ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
-  wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
   Choices = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
   SortingChoices = ["ID", "Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
-  %% Create a wxListBox that uses multiple selection
-  ListBox = wxListBox:new(Frame, 1, [{size, {-1, 100}},
-    {choices, Choices}, {style, ?wxLB_SINGLE}]),
-  wxListBox:setToolTip(ListBox, "Choose your search value category"),
+
+  %%--------------------- Creating Components -------------------------------------------------------------------
+  WX = wx:new(),
+  Frame = wxFrame:new(WX, ?wxID_ANY, "IMDb Map-Reduce Project"),
+  Window = wxWindow:new(Frame, ?wxID_ANY),
+
+  MainSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame),
+%%  LogoSizer = wxBoxSizer:new(?wxVERTICAL,Frame),
+%%  QuerySizer = wxBoxSizer:new(?wxVERTICAL,Frame),
+  ButtonSizer = wxStaticBoxSizer:new(?wxHORIZONTAL, Frame),
+  %%SortSizer = wxStaticBoxSizer:new(?wxVERTICAL,Frame,[{label, "Select Sorting Category:"}]),
+  %%CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame, [{label, "Select Categories (ID, Title are always selected):"}]),
+  %%CheckSizer = wxBoxSizer:new(?wxVERTICAL),
+  Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value (case-sensitive):"),
+  Headline2 = wxStaticText:new(Frame, ?wxID_ANY, "Select Categories (ID, Title are always selected):"),
+  Headline3 = wxStaticText:new(Frame, ?wxID_ANY, "Select Sorting Category:"),
+  TextCtrl = wxTextCtrl:new(Frame, ?wxID_ANY, [{value, ""}, {style, ?wxDEFAULT}]),
+  TextCtrlValidation = wxStaticText:new(Frame, ?wxID_ANY, ""),
+  ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
+  ListBox = wxListBox:new(Frame, ?wxID_ANY, [{size, {-1, 100}}, {choices, Choices}, {style, ?wxLB_SINGLE}]),
+  %%CheckPanel = wxPanel:new(Window,[]),
   CheckBoxes =
     [wxCheckBox:new(Frame, 1, "Duration", []),
       wxCheckBox:new(Frame, 2, "Genre", []),
@@ -61,37 +61,61 @@ start() ->
       wxCheckBox:new(Frame, 10, "Budget", []),
       wxCheckBox:new(Frame, 11, "Description", []),
       wxCheckBox:new(Frame, 12, "Year", [])],
+  ListBoxSort = wxListBox:new(Frame, ?wxID_ANY, [{size, {-1, 100}}, {choices, SortingChoices}, {style, ?wxLB_SINGLE}]),
+  %%Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL, [{underlined, true}]),
 
-  %%--------------------- Sizers and Events setup ----------------------------------------------------------------------
-  wxSizer:add(SubSizer1, TopTxt, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  wxSizer:add(SubSizer1, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  wxSizer:add(SubSizer1, TextCtrl, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  wxSizer:add(SubSizer1, ListBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  CheckSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame,
-    [{label, "Select Categories (ID, Title are always selected):"}]),
+  Image = wxImage:new("logo.png", []),
+  Bitmap = wxBitmap:new(wxImage:scale(Image, round(wxImage:getWidth(Image) * 0.345), round(wxImage:getHeight(Image) * 0.345), [{quality, ?wxIMAGE_QUALITY_HIGH}])),
+  StaticBitmap = wxStaticBitmap:new(Frame, ?wxID_ANY, Bitmap),
 
-  Fun = %%Adding checkboxes to the sizer
-  fun(Item) ->
-    wxSizer:add(CheckSizer, Item)
-  end,
-  wx:foreach(Fun, CheckBoxes),
-  wxSizer:add(SubSizer1, CheckSizer),
-  ListBoxSort = wxListBox:new(Frame, 1, [{size, {-1, 100}},
-    {choices, SortingChoices}, {style, ?wxLB_SINGLE}]),
-  wxSizer:add(SubSizer1, ListBoxSort, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+  Image2 = wxImage:new("query.png", []),
+  Bitmap2 = wxBitmap:new(wxImage:scale(Image2, round(wxImage:getWidth(Image2) * 0.25), round(wxImage:getHeight(Image2) * 0.25), [{quality, ?wxIMAGE_QUALITY_HIGH}])),
+  StaticBitmap2 = wxStaticBitmap:new(Frame, ?wxID_ANY, Bitmap2),
+
+
+  %%--------------------- Setting Components Properties -------------------------------------------------------------------
+  wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here (case-sensitive)"),
+  wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
+  wxListBox:setToolTip(ListBox, "Choose your search value category"),
   wxListBox:setToolTip(ListBoxSort, "Sort by"),
-  %%Event configuration for button click:
+  wxWindow:setLabel(Window, "IMDb Map-Reduce Project"),
+  wxWindow:setBackgroundColour(Frame, {40, 40, 40}),
+  wxWindow:setSize(Frame, 0, 0, 350, 765),
+  wxStaticText:setForegroundColour(Headline, {255, 200, 0}),
+  wxStaticText:setForegroundColour(Headline2, {255, 200, 0}),
+  wxStaticText:setForegroundColour(Headline3, {255, 200, 0}),
+  wxStaticText:setForegroundColour(TextCtrlValidation, ?wxRED),
+
+  %%--------------------- Sizers hierarchy and Events setup ----------------------------------------------------------------------
+  wxSizer:add(MainSizer, StaticBitmap, [{flag, ?wxALL bor ?wxEXPAND}]),
+  wxSizer:add(MainSizer, StaticBitmap2, [{flag, ?wxALL bor ?wxEXPAND}]),
+  wxSizer:add(MainSizer, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+  wxSizer:add(MainSizer, TextCtrl, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+  wxSizer:add(MainSizer, ListBox, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+  wxSizer:add(MainSizer, Headline2, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+
+  Fun = fun(Item) -> wxSizer:add(MainSizer, Item, [{flag, ?wxLEFT bor ?wxRIGHT bor ?wxEXPAND}, {border, 8}]),
+    wxCheckBox:setForegroundColour(Item, {255, 200, 0}) end, %%Adding checkboxes to the sizer
+  wx:foreach(Fun, CheckBoxes),
+
+%%  wxSizer:add(MainSizer, LogoSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+%%  wxSizer:add(MainSizer, QuerySizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+%%  wxSizer:add(MainSizer, ButtonSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+
+  wxSizer:add(MainSizer, Headline3, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+  wxSizer:add(MainSizer, ListBoxSort, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+  wxSizer:add(ButtonSizer, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
+  wxSizer:add(ButtonSizer, TextCtrlValidation, [{flag, ?wxALL}, {border, 8}]),
+%%  wxSizer:add(MainSizer, CheckSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+%%  wxSizer:add(MainSizer, SortSizer, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+  wxSizer:add(MainSizer, ButtonSizer, [{flag, ?wxTOP bor ?wxLEFT bor ?wxRIGHT bor ?wxEXPAND}, {border, 8}]),
+
+%%  %%Event configuration for button click:
   wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
     {userData, {wx:get_env(), TextCtrl, ListBox, CheckBoxes, TextCtrlValidation, ListBoxSort}}]),
 
-  wxSizer:add(SubSizer1, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
-  wxSizer:add(SubSizer1, TextCtrlValidation, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-  Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL, [{underlined, true}]),
-  wxTextCtrl:setFont(TopTxt, Font),
-  wxSizer:add(MainSizer, SubSizer1, [{flag, ?wxALIGN_LEFT}, {border, 5}]),
   wxWindow:setSizer(Frame, MainSizer),
   wxFrame:show(Frame).
-
 
 handle_click_event(A = #wx{}, _B) ->
   {Env, TextBox, ListBox, CheckBoxes, TextCtrlValidation, ListBoxSort} = A#wx.userData,
@@ -163,7 +187,8 @@ handle_click_event(A = #wx{}, _B) ->
 
   case IsInputValid of
     true ->
-      wxTextCtrl:setLabel(TextCtrlValidation, "The input is valid"),
+      wxTextCtrl:setLabel(TextCtrlValidation, "The query is valid"),
+      wxStaticText:setForegroundColour(TextCtrlValidation, {255, 200, 0}),
       %%---------------------------------- Sending the query to the master: ------------------------------------------------
       Query = #query{type = generic,
         searchVal = wxTextCtrl:getValue(TextBox),
@@ -177,36 +202,39 @@ handle_click_event(A = #wx{}, _B) ->
           WindowZero = wxWindow:new(),
           FrameZero = wxFrame:new(WindowZero, ?wxID_ANY, "No Results"),
           MainSizerZero = wxBoxSizer:new(?wxVERTICAL),
-          TextZero = wxStaticText:new(FrameZero, ?wxID_ANY,"There are 0 results for the requested qeury"),
+          TextZero = wxStaticText:new(FrameZero, ?wxID_ANY, "There are 0 results for the requested qeury"),
           wxSizer:add(MainSizerZero, TextZero, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
           wxWindow:setSizer(FrameZero, MainSizerZero),
           wxFrame:show(FrameZero),
           wxWindow:show(WindowZero);
+
         MoviesRaw when is_list(MoviesRaw) ->
           Movies = lists:sort(fun(M1 = #movie_data{}, M2 = #movie_data{}) ->
             (getValueForSorting(M1, wxListBox:getSelection(ListBoxSort)) < getValueForSorting(M2, wxListBox:getSelection(ListBoxSort))) end, MoviesRaw),
           TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
-          %% Setup sizers and frames:
+          %% Setup sizers and frames:--------------------------------------------------------------
           Window2 = wxWindow:new(),
-          Frame = wxFrame:new(Window2, ?wxID_ANY, "Results"),
-          wxFrame:center(Frame),
-          Panel = wxPanel:new(Frame, []),
+          Frame2 = wxFrame:new(Window2, ?wxID_ANY, "IMDb Map-Reduce Project"),
           MainSizer = wxBoxSizer:new(?wxVERTICAL),
           NumberOfResults = lists:flatlength(Movies),
           Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
             ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
-          Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
-
-          %% Creating the results table:
-          Grid = create_grid(Panel, Movies, NumberOfResults, Query),
-
-          %% Add to sizers and show:
+          Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
+          Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
+          Image3 = wxImage:new("results.png", []),
+          Bitmap3 = wxBitmap:new(wxImage:scale(Image3, round(wxImage:getWidth(Image3) * 0.345), round(wxImage:getHeight(Image3) * 0.345), [{quality, ?wxIMAGE_QUALITY_HIGH}])),
+          StaticBitmap3 = wxStaticBitmap:new(Frame2, ?wxID_ANY, Bitmap3),
+           %% Sizers properties and hierarchy -----------------------------------------------------
+          wxWindow:setSize(Frame2, 0, 0, 500, 500),
+          wxWindow:setBackgroundColour(Frame2, {40, 40, 40}),
+          wxStaticText:setForegroundColour(Headline, {255, 200, 0}),
+          wxFrame:center(Frame2),
+          wxSizer:add(MainSizer, StaticBitmap3, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+          wxSizer:add(MainSizer, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
           Options = [{flag, ?wxEXPAND}, {proportion, 1}],
-          wxSizer:add(Sizer, Grid, Options),
-          wxSizer:add(MainSizer, Sizer, Options),
-          wxPanel:setSizer(Panel, MainSizer),
-          wxFrame:show(Frame),
-          wxWindow:show(Window2);
+          wxSizer:add(MainSizer, Grid, Options),
+          wxWindow:setSizer(Frame2, MainSizer),
+          wxFrame:show(Frame2);
       %% ************************************************************
         _ -> %% We didn't receive a list - error
           Window2 = wxWindow:new(),
