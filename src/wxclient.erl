@@ -114,74 +114,87 @@ handle_click_event(A = #wx{}, _B) ->
   %% --------------------- Input validation ----------------------------------------------------------------------------
   Func_IsTextInt =
     fun(List) ->
-      List2 = lists:flatten(List),
-      Max = lists:max(List2),
-      Min = lists:min(List2),
-      (48 =< Min) and (Max =< 57)  %%ASCII of 0,9
-    end,
-  Func_IsTextDouble =
-    fun(List) ->
-      case lists:flatlength(List) == 3 of
+      case lists:flatten(List) > 0 of
         true ->
           List2 = lists:flatten(List),
-          (((lists:nth(1, List2) >= 48) and (lists:nth(3, List2) >= 48)) and
-            (((lists:nth(1, List2) =< 57) and (lists:nth(3, List2) =< 57)) and
-              (lists:nth(2, List2) =:= 46)));
+          Max = lists:max(List2),
+          Min = lists:min(List2),
+          (48 =< Min) and (Max =< 57);  %%ASCII of 0,9
         false -> false
       end
     end,
 
-  IsInputValid = (wxListBox:getSelection(ListBox) =/= -1) and
-    (
-      (wxListBox:getSelection(ListBox) == 0 and Func_IsTextInt(wxTextCtrl:getValue(TextBox)) == true) or %%DURATION
-      (wxListBox:getSelection(ListBox) == 11 and Func_IsTextInt(wxTextCtrl:getValue(TextBox)) == true) or %YEAR
-      (wxListBox:getSelection(ListBox) == 8 and (Func_IsTextInt(wxTextCtrl:getValue(TextBox)) == true or Func_IsTextDouble(Func_IsTextInt(wxTextCtrl:getValue(TextBox))))) or %%SCORE
-      (wxListBox:getSelection(ListBox) =/= 11 and wxListBox:getSelection(ListBox) =/= 8 and wxListBox:getSelection(ListBox) =/= 0)
-    ),
-  case IsInputValid of
-    true ->
-      %%---------------------------------- Sending the query to the master: ------------------------------------------------
-      Query = #query{type = generic,
-        searchVal = wxTextCtrl:getValue(TextBox),
-        searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)), resultCategory = Categories2Show},
-      [MasterNode | _T] = readfile(["clientslist.txt"]),
-      StartTime = os:timestamp(),%% for performance evaluation
-      _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
-      receive
-      %% ************* Handling Query Results Here: *******************
-        Movies when is_list(Movies) ->
-          TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
-          %% Setup sizers and frames:
-          Window2 = wxWindow:new(),
-          Frame = wxFrame:new(Window2, ?wxID_ANY, "Results"),
-          wxFrame:center(Frame),
-          Panel = wxPanel:new(Frame, []),
-          MainSizer = wxBoxSizer:new(?wxVERTICAL),
-          NumberOfResults = lists:flatlength(Movies),
-          Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
-            ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
-          Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
+      Func_IsTextDouble =
+        fun(List) ->
+          case lists:flatlength(List) == 3 of
+            true ->
+              List2 = lists:flatten(List),
+              (((lists:nth(1, List2) >= 48) and (lists:nth(3, List2) >= 48)) and
+                (((lists:nth(1, List2) =< 57) and (lists:nth(3, List2) =< 57)) and
+                  (lists:nth(2, List2) =:= 46)));
+            false -> false
+          end
+        end,
 
-          %% Creating the results table:
-          Grid = create_grid(Panel, Movies, NumberOfResults, Query),
+      IsInputValid =
+        (
+            (wxListBox:getSelection(ListBox) /= -1) and
+              (
+                  ((wxListBox:getSelection(ListBox) == 0) and Func_IsTextInt(wxTextCtrl:getValue(TextBox))) or %%DURATION
+                  (
+                      ((wxListBox:getSelection(ListBox) == 11) and Func_IsTextInt(wxTextCtrl:getValue(TextBox))) or %%YEAR
+                      (
+                          ((wxListBox:getSelection(ListBox) == 8) and (Func_IsTextInt(wxTextCtrl:getValue(TextBox)) or Func_IsTextDouble(wxTextCtrl:getValue(TextBox)))) or %%SCORE
+                          ((wxListBox:getSelection(ListBox) /= 11) and ((wxListBox:getSelection(ListBox) /= 8) and (wxListBox:getSelection(ListBox) /= 0)))
+                      )
+                  )
+              )
+        ),
 
-          %% Add to sizers and show:
-          Options = [{flag, ?wxEXPAND}, {proportion, 1}],
-          wxSizer:add(Sizer, Grid, Options),
-          wxSizer:add(MainSizer, Sizer, Options),
-          wxPanel:setSizer(Panel, MainSizer),
-          wxFrame:show(Frame),
-          wxWindow:show(Window2);
-      %% ************************************************************
-        _ -> %% We didn't receive a list - error
-          Window2 = wxWindow:new(),
-          Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Error"),
-          wxStaticText:new(Frame2, ?wxID_ANY, "An error occured."),
-          wxFrame:show(Frame2),
-          wxWindow:show(Window2)
-      end;
-    false -> wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
-  end.
+      case IsInputValid of
+        true ->
+          %%---------------------------------- Sending the query to the master: ------------------------------------------------
+          Query = #query{type = generic,
+            searchVal = wxTextCtrl:getValue(TextBox),
+            searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)), resultCategory = Categories2Show},
+          [MasterNode | _T] = readfile(["clientslist.txt"]),
+          StartTime = os:timestamp(),%% for performance evaluation
+          _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
+          receive
+          %% ************* Handling Query Results Here: *******************
+            Movies when is_list(Movies) ->
+              TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
+              %% Setup sizers and frames:
+              Window2 = wxWindow:new(),
+              Frame = wxFrame:new(Window2, ?wxID_ANY, "Results"),
+              wxFrame:center(Frame),
+              Panel = wxPanel:new(Frame, []),
+              MainSizer = wxBoxSizer:new(?wxVERTICAL),
+              NumberOfResults = lists:flatlength(Movies),
+              Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
+                ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
+              Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
+
+              %% Creating the results table:
+              Grid = create_grid(Panel, Movies, NumberOfResults, Query),
+
+              %% Add to sizers and show:
+              Options = [{flag, ?wxEXPAND}, {proportion, 1}],
+              wxSizer:add(Sizer, Grid, Options),
+              wxSizer:add(MainSizer, Sizer, Options),
+              wxPanel:setSizer(Panel, MainSizer),
+              wxFrame:show(Frame),
+              wxWindow:show(Window2);
+          %% ************************************************************
+            _ -> %% We didn't receive a list - error
+              Window2 = wxWindow:new(),
+              Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Error"),
+              wxStaticText:new(Frame2, ?wxID_ANY, "An error occured."),
+              wxFrame:show(Frame2),
+              wxWindow:show(Window2)
+          end;
+        false -> wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
+      end.
 
 %%  Window2 = wxWindow:new(),
 %%  Frame2 = wxFrame:new(Window2, ?wxID_ANY, integer_to_list(wxListBox:getSelection(ListBox))),
