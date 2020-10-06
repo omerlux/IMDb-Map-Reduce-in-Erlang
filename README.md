@@ -12,7 +12,7 @@
 
 - ### Technical Overview:
 We built the system as the Disco-Project system supposed to be:
-<p style="height: 20px; overflow: hidden" align="center">
+<p style="height: 10px; overflow: hidden" align="center">
   <img src="https://github.com/ilaynuriel/Project-Ilay-Omer/blob/master/src/overview.png?raw=true">
 </p>
 
