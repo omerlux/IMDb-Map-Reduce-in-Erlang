@@ -195,56 +195,63 @@ handle_click_event(A = #wx{}, _B) ->
         searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)), resultCategory = Categories2Show},
       [MasterNode | _T] = readfile(["clientslist.txt"]),
       StartTime = os:timestamp(),%% for performance evaluation
-      _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
-      receive
-      %% ************* Handling Query Results Here: *******************
-        [] ->
-          WindowZero = wxWindow:new(),
-          FrameZero = wxFrame:new(WindowZero, ?wxID_ANY, "No Results"),
-          MainSizerZero = wxBoxSizer:new(?wxVERTICAL),
-          TextZero = wxStaticText:new(FrameZero, ?wxID_ANY, "There are 0 results for the requested qeury"),
-          wxSizer:add(MainSizerZero, TextZero, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-          wxWindow:setSizer(FrameZero, MainSizerZero),
-          wxFrame:show(FrameZero),
-          wxWindow:show(WindowZero);
+      try
+        gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
+        receive
+        %% ************* Handling Query Results Here: *******************
+          [] ->
+            WindowZero = wxWindow:new(),
+            FrameZero = wxFrame:new(WindowZero, ?wxID_ANY, "No Results"),
+            MainSizerZero = wxBoxSizer:new(?wxVERTICAL),
+            TextZero = wxStaticText:new(FrameZero, ?wxID_ANY, "There are 0 results for the requested qeury"),
+            wxSizer:add(MainSizerZero, TextZero, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+            wxWindow:setSizer(FrameZero, MainSizerZero),
+            wxFrame:show(FrameZero),
+            wxWindow:show(WindowZero);
 
-        MoviesRaw when is_list(MoviesRaw) ->
-          Movies = lists:sort(fun(M1 = #movie_data{}, M2 = #movie_data{}) ->
-            (getValueForSorting(M1, wxListBox:getSelection(ListBoxSort)) < getValueForSorting(M2, wxListBox:getSelection(ListBoxSort))) end, MoviesRaw),
-          TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
-          %% Setup sizers and frames:--------------------------------------------------------------
-          Window2 = wxWindow:new(),
-          Frame2 = wxFrame:new(Window2, ?wxID_ANY, "IMDb Map-Reduce Project"),
-          MainSizer = wxBoxSizer:new(?wxVERTICAL),
-          NumberOfResults = lists:flatlength(Movies),
-          Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
-            ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
-          Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
-          Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
-          Image3 = wxImage:new("results.png", []),
-          Bitmap3 = wxBitmap:new(wxImage:scale(Image3, round(wxImage:getWidth(Image3) * 0.345), round(wxImage:getHeight(Image3) * 0.345), [{quality, ?wxIMAGE_QUALITY_HIGH}])),
-          StaticBitmap3 = wxStaticBitmap:new(Frame2, ?wxID_ANY, Bitmap3),
-           %% Sizers properties and hierarchy -----------------------------------------------------
-          wxWindow:setSize(Frame2, 0, 0, 500, 500),
-          wxWindow:setBackgroundColour(Frame2, {40, 40, 40}),
-          wxStaticText:setForegroundColour(Headline, {255, 200, 0}),
-          wxFrame:center(Frame2),
-          wxSizer:add(MainSizer, StaticBitmap3, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-          wxSizer:add(MainSizer, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-          Options = [{flag, ?wxEXPAND}, {proportion, 1}],
-          wxSizer:add(MainSizer, Grid, Options),
-          wxWindow:setSizer(Frame2, MainSizer),
-          wxFrame:show(Frame2);
-      %% ************************************************************
-        _ -> %% We didn't receive a list - error
-          Window2 = wxWindow:new(),
-          Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Error"),
-          wxStaticText:new(Frame2, ?wxID_ANY, "An error occured."),
-          wxFrame:show(Frame2),
-          wxWindow:show(Window2)
+          MoviesRaw when is_list(MoviesRaw) ->
+            Movies = lists:sort(fun(M1 = #movie_data{}, M2 = #movie_data{}) ->
+              (getValueForSorting(M1, wxListBox:getSelection(ListBoxSort)) < getValueForSorting(M2, wxListBox:getSelection(ListBoxSort))) end, MoviesRaw),
+            TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
+            %% Setup sizers and frames:--------------------------------------------------------------
+            Window2 = wxWindow:new(),
+            Frame2 = wxFrame:new(Window2, ?wxID_ANY, "IMDb Map-Reduce Project"),
+            MainSizer = wxBoxSizer:new(?wxVERTICAL),
+            NumberOfResults = lists:flatlength(Movies),
+            Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
+              ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
+            Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
+            Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
+            Image3 = wxImage:new("results.png", []),
+            Bitmap3 = wxBitmap:new(wxImage:scale(Image3, round(wxImage:getWidth(Image3) * 0.345), round(wxImage:getHeight(Image3) * 0.345), [{quality, ?wxIMAGE_QUALITY_HIGH}])),
+            StaticBitmap3 = wxStaticBitmap:new(Frame2, ?wxID_ANY, Bitmap3),
+            %% Sizers properties and hierarchy -----------------------------------------------------
+            wxWindow:setSize(Frame2, 0, 0, 500, 500),
+            wxWindow:setBackgroundColour(Frame2, {40, 40, 40}),
+            wxStaticText:setForegroundColour(Headline, {255, 200, 0}),
+            wxFrame:center(Frame2),
+            wxSizer:add(MainSizer, StaticBitmap3, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+            wxSizer:add(MainSizer, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+            Options = [{flag, ?wxEXPAND}, {proportion, 1}],
+            wxSizer:add(MainSizer, Grid, Options),
+            wxWindow:setSizer(Frame2, MainSizer),
+            wxFrame:show(Frame2);
+        %% ************************************************************
+          _ -> %% We didn't receive a list - error
+            Window2 = wxWindow:new(),
+            Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Error"),
+            wxStaticText:new(Frame2, ?wxID_ANY, "An error occured."),
+            wxFrame:show(Frame2),
+            wxWindow:show(Window2)
+        end
+      catch
+        _:_-> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
+          wxTextCtrl:setLabel(TextCtrlValidation, "The master is down")
       end;
-    false -> wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
-  end.
+        false -> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
+          wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
+      end.
+
 
 %% Creating the result's table
 create_grid(Panel, [Datum2 = #movie_data{} | T], NumberOfResults, Query = #query{}) ->
