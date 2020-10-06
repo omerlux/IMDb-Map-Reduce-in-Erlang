@@ -34,6 +34,7 @@ start() ->
   Headline = wxStaticText:new(Frame, ?wxID_ANY, "Insert Value (case-sensitive):"),
   TextCtrl = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
   wxTextCtrl:setToolTip(TextCtrl, "Enter your search value here (case-sensitive)"),
+  TextCtrlValidation = wxTextCtrl:new(Frame, 1, [{value, ""}, {style, ?wxDEFAULT}]),
   ButtonSend = wxButton:new(Frame, ?wxID_ANY, [{label, "Send Query"}, {style, ?wxBU_EXACTFIT}]),
   wxButton:setToolTip(ButtonSend, "Send your query to the disco"),
   Choices = ["Title", "Year", "Genre", "Duration", "Country", "Language", "Director", "Writer", "Production Company", "Actor", "Description", "Score", "Budget"],
@@ -64,17 +65,18 @@ start() ->
     [{label, "Select Categories (ID, Title are always selected):"}]),
 
   Fun = %%Adding checkboxes to the sizer
-    fun(Item) ->
-      wxSizer:add(CheckSizer, Item)
-    end,
+  fun(Item) ->
+    wxSizer:add(CheckSizer, Item)
+  end,
   wx:foreach(Fun, CheckBoxes),
   wxSizer:add(SubSizer1, CheckSizer),
 
   %%Event configuration for button click:
   wxEvtHandler:connect(ButtonSend, command_button_clicked, [{callback, fun handle_click_event/2},
-    {userData, {wx:get_env(), TextCtrl, ListBox, CheckBoxes}}]),
+    {userData, {wx:get_env(), TextCtrl, ListBox, CheckBoxes, TextCtrlValidation}}]),
 
   wxSizer:add(SubSizer1, ButtonSend, [{flag, ?wxALL}, {border, 8}]),
+  wxSizer:add(SubSizer1, TextCtrlValidation, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
   Font = wxFont:new(14, ?wxFONTFAMILY_DEFAULT, ?wxFONTSTYLE_NORMAL, ?wxFONTWEIGHT_NORMAL, [{underlined, true}]),
   wxTextCtrl:setFont(TopTxt, Font),
   wxSizer:add(MainSizer, SubSizer1, [{flag, ?wxALIGN_LEFT}, {border, 5}]),
@@ -82,7 +84,7 @@ start() ->
   wxFrame:show(Frame).
 
 handle_click_event(A = #wx{}, _B) ->
-  {Env, TextBox, ListBox, CheckBoxes} = A#wx.userData,
+  {Env, TextBox, ListBox, CheckBoxes, TextCtrlValidation} = A#wx.userData,
   wx:set_env(Env),
   %%Create the resultCategory true/false tuple:
   Categories2Show = #movie_data{
@@ -110,69 +112,81 @@ handle_click_event(A = #wx{}, _B) ->
     reviews_from_critics = false
   },
   %% --------------------- Input validation ----------------------------------------------------------------------------
-%%  Func_IsTextInt =
-%%    fun(List) ->
-%%      List2 = lists:flatten(List),
-%%      Max = lists:max(List2),
-%%      Min = lists:min(List2),
-%%      (48 =< Min) and (Max =< 57)  %%ASCII of 0,9
-%%    end,
-%%  IsInputValid = (wxListBox:getSelection(ListBox) =/= -1) and
-%%    (
-%%      (wxListBox:getSelection(ListBox) == 0 and Func_IsTextInt(wxTextCtrl:getValue(TextBox))==true) or %%DURATION
-%%      (wxListBox:getSelection(ListBox) == 8 and (Func_IsTextInt(wxTextCtrl:getValue(TextBox))==true or (lists:flatlength(wxTextCtrl:getValue(TextBox)) ==3 and ))) or %%SCORE
-%%      (wxListBox:getSelection(ListBox) =/= 8 and wxListBox:getSelection(ListBox) =/= 0)
-%%    ),
-%%  case IsInputValid  of
-%%    true ->void;
-%%    false->void
-%%  end,
+  Func_IsTextInt =
+    fun(List) ->
+      List2 = lists:flatten(List),
+      Max = lists:max(List2),
+      Min = lists:min(List2),
+      (48 =< Min) and (Max =< 57)  %%ASCII of 0,9
+    end,
+  Func_IsTextDouble =
+    fun(List) ->
+      case lists:flatlength(List) == 3 of
+        true ->
+          List2 = lists:flatten(List),
+          (((lists:nth(1, List2) >= 48) and (lists:nth(3, List2) >= 48)) and
+            (((lists:nth(1, List2) =< 57) and (lists:nth(3, List2) =< 57)) and
+              (lists:nth(2, List2) =:= 46)));
+        false -> false
+      end
+    end,
+
+  IsInputValid = (wxListBox:getSelection(ListBox) =/= -1) and
+    (
+      (wxListBox:getSelection(ListBox) == 0 and Func_IsTextInt(wxTextCtrl:getValue(TextBox)) == true) or %%DURATION
+      (wxListBox:getSelection(ListBox) == 11 and Func_IsTextInt(wxTextCtrl:getValue(TextBox)) == true) or %YEAR
+      (wxListBox:getSelection(ListBox) == 8 and (Func_IsTextInt(wxTextCtrl:getValue(TextBox)) == true or Func_IsTextDouble(Func_IsTextInt(wxTextCtrl:getValue(TextBox))))) or %%SCORE
+      (wxListBox:getSelection(ListBox) =/= 11 and wxListBox:getSelection(ListBox) =/= 8 and wxListBox:getSelection(ListBox) =/= 0)
+    ),
+  case IsInputValid of
+    true ->
+      %%---------------------------------- Sending the query to the master: ------------------------------------------------
+      Query = #query{type = generic,
+        searchVal = wxTextCtrl:getValue(TextBox),
+        searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)), resultCategory = Categories2Show},
+      [MasterNode | _T] = readfile(["clientslist.txt"]),
+      StartTime = os:timestamp(),%% for performance evaluation
+      _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
+      receive
+      %% ************* Handling Query Results Here: *******************
+        Movies when is_list(Movies) ->
+          TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
+          %% Setup sizers and frames:
+          Window2 = wxWindow:new(),
+          Frame = wxFrame:new(Window2, ?wxID_ANY, "Results"),
+          wxFrame:center(Frame),
+          Panel = wxPanel:new(Frame, []),
+          MainSizer = wxBoxSizer:new(?wxVERTICAL),
+          NumberOfResults = lists:flatlength(Movies),
+          Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
+            ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
+          Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
+
+          %% Creating the results table:
+          Grid = create_grid(Panel, Movies, NumberOfResults, Query),
+
+          %% Add to sizers and show:
+          Options = [{flag, ?wxEXPAND}, {proportion, 1}],
+          wxSizer:add(Sizer, Grid, Options),
+          wxSizer:add(MainSizer, Sizer, Options),
+          wxPanel:setSizer(Panel, MainSizer),
+          wxFrame:show(Frame),
+          wxWindow:show(Window2);
+      %% ************************************************************
+        _ -> %% We didn't receive a list - error
+          Window2 = wxWindow:new(),
+          Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Error"),
+          wxStaticText:new(Frame2, ?wxID_ANY, "An error occured."),
+          wxFrame:show(Frame2),
+          wxWindow:show(Window2)
+      end;
+    false -> wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
+  end.
 
 %%  Window2 = wxWindow:new(),
 %%  Frame2 = wxFrame:new(Window2, ?wxID_ANY, integer_to_list(wxListBox:getSelection(ListBox))),
 %%  wxFrame:show(Frame2),
 %%  wxWindow:show(Window2),
-
-  %%---------------------------------- Sending the query to the master: ------------------------------------------------
-  Query = #query{type = generic,
-    searchVal = wxTextCtrl:getValue(TextBox),
-    searchCategory = wxListBox:getString(ListBox, wxListBox:getSelection(ListBox)), resultCategory = Categories2Show},
-  [MasterNode | _T] = readfile(["clientslist.txt"]),
-  StartTime = os:timestamp(),%% for performance evaluation
-  _Ack = gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
-  receive
-  %% ************* Handling Query Results Here: *******************
-    Movies when is_list(Movies) ->
-      TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
-      %% Setup sizers and frames:
-      Window2 = wxWindow:new(),
-      Frame = wxFrame:new(Window2, ?wxID_ANY, "Results"),
-      wxFrame:center(Frame),
-      Panel = wxPanel:new(Frame, []),
-      MainSizer = wxBoxSizer:new(?wxVERTICAL),
-      NumberOfResults = lists:flatlength(Movies),
-      Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
-        ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
-      Sizer = wxStaticBoxSizer:new(?wxVERTICAL, Panel, [{label, Label}]),
-
-      %% Creating the results table:
-      Grid = create_grid(Panel, Movies, NumberOfResults, Query),
-
-      %% Add to sizers and show:
-      Options = [{flag, ?wxEXPAND}, {proportion, 1}],
-      wxSizer:add(Sizer, Grid, Options),
-      wxSizer:add(MainSizer, Sizer, Options),
-      wxPanel:setSizer(Panel, MainSizer),
-      wxFrame:show(Frame),
-      wxWindow:show(Window2);
-  %% ************************************************************
-    _ -> %% We didn't receive a list - error
-      Window2 = wxWindow:new(),
-      Frame2 = wxFrame:new(Window2, ?wxID_ANY, "Error"),
-      wxStaticText:new(Frame2, ?wxID_ANY, "An error occured."),
-      wxFrame:show(Frame2),
-      wxWindow:show(Window2)
-  end.
 
 %% Creating the result's table
 create_grid(Panel, [Datum2 = #movie_data{} | T], NumberOfResults, Query = #query{}) ->
