@@ -13,7 +13,7 @@
 - ### Technical Overview:
 We built the system as the Disco-Project system supposed to be:
 <p style="height: 20px; overflow: hidden" align="center">
-  <img src="https://disco.readthedocs.io/en/latest/_images/disco-arch.png">
+  <img src="https://github.com/ilaynuriel/Project-Ilay-Omer/blob/master/src/overview.png?raw=true">
 </p>
 
 ##### Our overview of the system (Same as [Disco-Project](https://disco.readthedocs.io/en/latest/overview.html))
