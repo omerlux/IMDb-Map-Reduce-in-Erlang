@@ -20,7 +20,7 @@ We built the system as the Disco-Project system supposed to be:
 
 - ### How to Run:
 
-First in every computer, run compilation in erlang shell:
+First in every computer, run compilation in erlang shell (worked with Erlang 22(OTP22, erts- 10.7))
 ```
 erl
 c(master). c(server). c(wxclient). c(parse_csv). c(dataDistributor). 
