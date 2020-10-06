@@ -455,7 +455,7 @@ getValueForSorting(Movie = #movie_data{}, SortParam) ->
 
 %% Function for a process which monitors the master node status, and informs the client if the master node is down
 monitorMaster(FromPID, MasterNode) ->
-  gen_server:cast({masterpid, MasterNode},ping),
+  gen_server:cast({masterpid, list_to_atom(MasterNode)},ping),
   net_kernel:monitor_nodes(true),
   receive
     {nodedown, MasterNode} -> FromPID ! masterdown;
