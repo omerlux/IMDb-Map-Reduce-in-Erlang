@@ -43,6 +43,11 @@ erl -name master -run master start_link
 ```
 erl -name client# -run wxclient start
 ```
+If GUI won't open, do as follow:
+```
+erl -name client#
+wxclient:start().
+```
 
 
  **(-name can be -sname for local connection run)**
