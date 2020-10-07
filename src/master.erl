@@ -150,6 +150,8 @@ sendQuery(Query = #query{}, FromPID, NumOfServers, Servers) ->
 
 %% sendQuery - sent to all servers, now wait till you gather all the results
 sendQuery(_Query = #query{}, [], NumberOfServers) ->
+  gen_server:cast({masterpid, node()}, ping), %% TODO: check if it can be deleted
+  net_kernel:monitor_nodes(true),
   gather(NumberOfServers);
 
 %% sendQuery - send each server a job by a special pid
@@ -172,10 +174,19 @@ sendServerJob(ParentPID, Query = #query{}, Server) ->
   end,
   io:format("sendServerJob function of server ~p sent a reply to ~p~n", [Server, ParentPID]).
 
+% gather - a pid for each client will wait to get all messages from the servers (# = ExpectedResults)
 gather(0) -> [];
 gather(ExpectedResults) ->
   io:format("Entered gather function expecting ~p results ~n", [ExpectedResults]),
   receive
+    {nodedown, Server} ->
+      case string:str(atom_to_list(Server), "server") > 0 of
+        true -> % a server is down!! send what you've got
+          io:format("A server is down, sending what's been gathered untill now...~n"),
+          gather(ExpectedResults-1);
+        false -> % this is not a server.. false alarm
+          gather(ExpectedResults)
+      end;
     Result ->
       io:format("Received result at ~p~n", [self()]),
       Result ++ gather(ExpectedResults - 1)
