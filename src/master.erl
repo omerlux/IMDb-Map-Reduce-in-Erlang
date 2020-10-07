@@ -149,8 +149,8 @@ code_change(_OldVsn, State = #master_state{}, _Extra) ->
 sendQuery(Query = #query{}, FromPID, NumOfServers, Servers) ->
   Result = sendQuery(Query, Servers, NumOfServers),
   io:format("Received final result at ~p, sending it to ~p~n", [self(), FromPID]),
-  NumOfServers = lists:flatlength(checkAlive(Servers, [])),
-  FromPID ! {NumOfServers, Result}.
+  NumOfServers2 = lists:flatlength(checkAlive(Servers, [])),
+  FromPID ! {NumOfServers2, Result}.
 
 %% sendQuery - sent to all servers, now wait till you gather all the results
 sendQuery(_Query = #query{}, [], NumberOfServers) ->
