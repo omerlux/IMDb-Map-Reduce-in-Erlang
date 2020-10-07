@@ -48,6 +48,7 @@ init([]) ->
   net_kernel:monitor_nodes(true),
   % distributing the data to whom that is ready to receive.
   ServersInfo = dataDistributor:distribute(),
+  flush(),
   {ok, #master_state{servers = ServersInfo}}.
 
 
@@ -86,6 +87,7 @@ handle_cast({nodeup, Node}, State = #master_state{}) ->
     true -> %% note: no other request can be handled while distributing
       io:format("A new node is up: ~p~n", [Node]),
       ServersInfo = dataDistributor:distribute(),
+      flush(),
       UpdatedState = State#master_state{servers = ServersInfo};
     false ->  UpdatedState = State         % server isn't part of the distribution
   end,
@@ -110,8 +112,9 @@ handle_info({nodedown, Node}, State = #master_state{}) ->
   case string:str(atom_to_list(Node), "server") > 0 of
     true ->
       io:format("A node is down: ~p~n", [Node]),
-      ServersInfo = dataDistributor:distribute();
-    false ->
+      ServersInfo = dataDistributor:distribute(),
+      flush();
+  false ->
       ServersInfo = State#master_state.servers
   end,
   {noreply, State#master_state{servers = ServersInfo}};
@@ -201,3 +204,11 @@ checkAlive([S0 | Servers], Nodes) ->
     false -> checkAlive(Servers, Nodes)
   end;
 checkAlive([], Servers) -> Servers.
+
+% flush - flushing redundant messages
+flush() ->
+  receive
+    _ -> flush()
+  after
+    0 -> ok
+  end.
