@@ -146,7 +146,8 @@ code_change(_OldVsn, State = #master_state{}, _Extra) ->
 sendQuery(Query = #query{}, FromPID, NumOfServers, Servers) ->
   Result = sendQuery(Query, Servers, NumOfServers),
   io:format("Received final result at ~p, sending it to ~p~n", [self(), FromPID]),
-  FromPID ! Result.
+  NumOfServers = lists:flatlength(checkAlive(Servers, [])),
+  FromPID ! {NumOfServers, Result}.
 
 %% sendQuery - sent to all servers, now wait till you gather all the results
 sendQuery(_Query = #query{}, [], NumberOfServers) ->
@@ -182,7 +183,7 @@ gather(ExpectedResults) ->
     {nodedown, Server} ->
       case string:str(atom_to_list(Server), "server") > 0 of
         true -> % a server is down!! send what you've got
-          io:format("A server is down, sending what's been gathered untill now...~n"),
+          io:format("A server is down, sending data without it...~n"),
           gather(ExpectedResults-1);
         false -> % this is not a server.. false alarm
           gather(ExpectedResults)
@@ -191,3 +192,12 @@ gather(ExpectedResults) ->
       io:format("Received result at ~p~n", [self()]),
       Result ++ gather(ExpectedResults - 1)
   end.
+
+%% checkAlive - check each server if alive. Returns a list of server nodes which are alive
+checkAlive([S0 | Servers], Nodes) ->
+  case net_kernel:connect_node(S0) of
+    true -> % erlang:monitor_node(Node, true),    % monitoring the node!
+      checkAlive(Servers, [S0 | Nodes]);
+    false -> checkAlive(Servers, Nodes)
+  end;
+checkAlive([], Servers) -> Servers.

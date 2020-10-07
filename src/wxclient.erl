@@ -193,30 +193,56 @@ handle_click_event(A = #wx{}, _B) ->
             wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
             wxTextCtrl:setLabel(TextCtrlValidation, "The master is down, \ntry again in a few moments");
 
-          [] ->
+          {Servers, []} ->
             WindowZero = wxWindow:new(),
             FrameZero = wxFrame:new(WindowZero, ?wxID_ANY, "No Results"),
             MainSizerZero = wxBoxSizer:new(?wxVERTICAL),
-            TextZero = wxStaticText:new(FrameZero, ?wxID_ANY, "There are 0 results for the requested qeury"),
+            TextZero = wxStaticText:new(FrameZero, ?wxID_ANY, "There are 0 results for the requested qeury,\n\tsearched by " ++ integer_to_list(Servers) ++ " servers..."),
             wxSizer:add(MainSizerZero, TextZero, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
             wxWindow:setSizer(FrameZero, MainSizerZero),
             wxFrame:show(FrameZero),
             wxWindow:show(WindowZero);
 
-          MoviesRaw when is_list(MoviesRaw) ->
+          {Servers, MoviesRaw} when is_list(MoviesRaw) and is_integer(Servers) ->
+            TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
             Movies = lists:sort(fun(M1 = #movie_data{}, M2 = #movie_data{}) ->
               (getValueForSorting(M1, wxListBox:getSelection(ListBoxSort)) < getValueForSorting(M2, wxListBox:getSelection(ListBoxSort))) end, MoviesRaw),
-            TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
             %% Setup sizers and frames:--------------------------------------------------------------
             Window2 = wxWindow:new(),
             Frame2 = wxFrame:new(Window2, ?wxID_ANY, "IMDb Map-Reduce Project"),
             MainSizer = wxBoxSizer:new(?wxVERTICAL),
             NumberOfResults = lists:flatlength(Movies),
 
-            Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
-              ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
+            Label = "Search value: " ++ Query#query.searchVal ++ "  | Value category: "
+              ++ Query#query.searchCategory ++ "  | Sorting by: " ++ getNameForSorting(wxListBox:getSelection(ListBoxSort)),
             Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
-            LabelStatistics = "FILL STATISTICS HERE",
+            %% Finding statistics -----------------------------------------------------------
+            General = integer_to_list(NumberOfResults) ++ " Results | " ++ integer_to_list(Servers) ++ " Servers" ++ " | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
+            YearStat = case Categories2Show#movie_data.year of % check if there are answers of year
+                         true -> YearList = [list_to_integer(Y#movie_data.year) || Y <- Movies],
+                           "\n\tYear -        Min " ++ integer_to_list(lists:min(YearList)) ++ " | Max " ++
+                             integer_to_list(lists:max(YearList)) ++ " | Avg " ++ io_lib:format("~.2f", [lists:sum(YearList) / NumberOfResults]);
+                         false -> ""
+                       end,
+            DurStat = case Categories2Show#movie_data.duration of % check if there are answers of duration
+                        true -> DurList = [list_to_integer(Y#movie_data.duration) || Y <- Movies, Y /= ""],
+                          "\n\tDuration - Min " ++ integer_to_list(lists:min(DurList)) ++ " | Max " ++
+                            integer_to_list(lists:max(DurList)) ++ " | Avg " ++ io_lib:format("~.2f", [lists:sum(DurList) / NumberOfResults]);
+                        false -> ""
+                      end,
+            ToNumber = fun(List) ->
+                            case Func_IsTextInt(List) of
+                              true -> list_to_integer(List);
+                              false -> list_to_float(List)
+                            end
+                       end,
+            AvgvoteStat = case Categories2Show#movie_data.avg_vote of % check if there are answers of duration
+                            true -> AvgVoteList = [ToNumber(Y#movie_data.avg_vote) || Y <- Movies, Y /= ""],
+                              "\n\tAvg Vote - Min " ++ io_lib:format("~.1f", [lists:min(AvgVoteList)]) ++ " | Max " ++
+                                io_lib:format("~.1f", [lists:max(AvgVoteList)]) ++ " | Avg " ++ io_lib:format("~.2f", [lists:sum(AvgVoteList) / NumberOfResults]);
+                            false -> ""
+                          end,
+            LabelStatistics = "Result's Statistics: \n\t" ++ General ++ YearStat ++ DurStat ++ AvgvoteStat,
             Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics),%% LabelStatistics is text for statistics
 
             Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
@@ -441,7 +467,7 @@ getValueForSorting(Movie = #movie_data{}, SortParam) ->
     SortParam == 1 -> Movie#movie_data.title;
     SortParam == 2 -> Movie#movie_data.year;
     SortParam == 3 -> Movie#movie_data.genre;
-    SortParam == 4 -> Movie#movie_data.duration;
+    SortParam == 4 -> list_to_integer(Movie#movie_data.duration);
     SortParam == 5 -> Movie#movie_data.country;
     SortParam == 6 -> Movie#movie_data.language;
     SortParam == 7 -> Movie#movie_data.director;
@@ -452,6 +478,25 @@ getValueForSorting(Movie = #movie_data{}, SortParam) ->
     SortParam == 12 -> Movie#movie_data.avg_vote;
     SortParam == 13 -> Movie#movie_data.budget;
     true -> Movie#movie_data.title
+  end.
+
+getNameForSorting(SortParam) ->
+  if
+    SortParam == 0 -> "Id";
+    SortParam == 1 -> "Title";
+    SortParam == 2 -> "Year";
+    SortParam == 3 -> "Genre";
+    SortParam == 4 -> "Duration";
+    SortParam == 5 -> "Ccountry";
+    SortParam == 6 -> "Language";
+    SortParam == 7 -> "Director";
+    SortParam == 8 -> "Wwriter";
+    SortParam == 9 -> "Production Company";
+    SortParam == 10 -> "Actors";
+    SortParam == 11 -> "Description";
+    SortParam == 12 -> "Average Vote";
+    SortParam == 13 -> "Budget";
+    true -> "Title"
   end.
 
 %% Function for a process which monitors the master node status, and informs the client if the master node is down
