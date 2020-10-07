@@ -31,7 +31,7 @@ start() ->
   %%--------------------- Creating Components -------------------------------------------------------------------
   WX = wx:new(),
   Frame = wxFrame:new(WX, ?wxID_ANY, "IMDb Map-Reduce Project"),
-  Window = wxWindow:new(Frame, ?wxID_ANY),
+  %%Window = wxWindow:new(Frame, ?wxID_ANY),
 
   MainSizer = wxStaticBoxSizer:new(?wxVERTICAL, Frame),
   ButtonSizer = wxStaticBoxSizer:new(?wxHORIZONTAL, Frame),
@@ -72,7 +72,7 @@ start() ->
   wxButton:setToolTip(ButtonSend, "Send your query to the master"),
   wxListBox:setToolTip(ListBox, "Choose your search value category"),
   wxListBox:setToolTip(ListBoxSort, "Sort by"),
-  wxWindow:setLabel(Window, "IMDb Map-Reduce Project"),
+  wxWindow:setLabel(Frame, "IMDb Map-Reduce Project"),
   wxWindow:setBackgroundColour(Frame, {40, 40, 40}),
   wxWindow:setSize(Frame, 0, 0, 350, 765),
   wxStaticText:setForegroundColour(Headline, {255, 200, 0}),
@@ -212,12 +212,12 @@ handle_click_event(A = #wx{}, _B) ->
             Frame2 = wxFrame:new(Window2, ?wxID_ANY, "IMDb Map-Reduce Project"),
             MainSizer = wxBoxSizer:new(?wxVERTICAL),
             NumberOfResults = lists:flatlength(Movies),
+
             Label = "Search value: " ++ Query#query.searchVal ++ " | Value category: " ++ Query#query.searchCategory
               ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
             Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
-
-            %% Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics),%% LabelStatistics is text for statistics
-
+            LabelStatistics = "FILL STATISTICS HERE",
+            Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics),%% LabelStatistics is text for statistics
 
             Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
             Image3 = wxImage:new("results.png", []),
@@ -227,11 +227,11 @@ handle_click_event(A = #wx{}, _B) ->
             wxWindow:setSize(Frame2, 0, 0, 500, 500),
             wxWindow:setBackgroundColour(Frame2, {40, 40, 40}),
             wxStaticText:setForegroundColour(Headline, {255, 200, 0}),
-            %%wxStaticText:setForegroundColour(Headline2, {255, 200, 0}),
+            wxStaticText:setForegroundColour(Headline2, {255, 200, 0}),
             wxFrame:center(Frame2),
             wxSizer:add(MainSizer, StaticBitmap3, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
             wxSizer:add(MainSizer, Headline, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
-            %% wxSizer:add(MainSizer, Headline2, [{flag, ?wxALL bor ?wxEXPAND}, {border, 8}]),
+            wxSizer:add(MainSizer, Headline2, [{flag, ?wxBOTTOM bor ?wxLEFT bor ?wxRIGHT bor ?wxEXPAND}, {border, 8}]),
             Options = [{flag, ?wxEXPAND}, {proportion, 1}],
             wxSizer:add(MainSizer, Grid, Options),
             wxWindow:setSizer(Frame2, MainSizer),
