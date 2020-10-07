@@ -51,4 +51,4 @@ erl -name client# -run wxclient start
 - [x] Build infrastructure
 - [x] Handle exceptions
 - [X] Finish client's gui
-- [ ] Add statistics to queries
+- [X] Add statistics to queries
