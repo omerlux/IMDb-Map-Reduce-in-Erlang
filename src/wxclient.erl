@@ -175,8 +175,8 @@ handle_click_event(A = #wx{}, _B) ->
 
   case IsInputValid of
     true ->
-      wxTextCtrl:setLabel(TextCtrlValidation, "The query is valid"),
-      wxStaticText:setForegroundColour(TextCtrlValidation, {255, 200, 0}),
+      wxTextCtrl:setLabel(TextCtrlValidation, "Sending Request..."),
+      wxTextCtrl:setForegroundColour(TextCtrlValidation, {255, 200, 0}),
       %%---------------------------------- Sending the query to the master: ------------------------------------------------
       Query = #query{type = generic,
         searchVal = wxTextCtrl:getValue(TextBox),
@@ -186,12 +186,13 @@ handle_click_event(A = #wx{}, _B) ->
       try
         gen_server:call({masterpid, list_to_atom(MasterNode)}, Query), %% we receive acknowledge and the result will arrive from another process
         Self = self(),
-        register(monitormasterpid, monitorMaster(Self, MasterNode)),
+        register(monitormasterpid, spawn(fun() -> monitorMaster(Self, MasterNode) end)),
         receive
         %% ************* Handling Query Results Here: *******************
           masterdown ->
             wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
-            wxTextCtrl:setLabel(TextCtrlValidation, "The master is down");
+            wxTextCtrl:setLabel(TextCtrlValidation, "The master is down, \ntry again in a few moments");
+
           [] ->
             WindowZero = wxWindow:new(),
             FrameZero = wxFrame:new(WindowZero, ?wxID_ANY, "No Results"),
@@ -215,7 +216,7 @@ handle_click_event(A = #wx{}, _B) ->
               ++ " | " ++ integer_to_list(NumberOfResults) ++ " Results | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
             Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
 
-            %% Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics),
+            %% Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics),%% LabelStatistics is text for statistics
 
 
             Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
@@ -245,8 +246,8 @@ handle_click_event(A = #wx{}, _B) ->
         end,
         monitormasterpid ! shutdown
       catch
-        _:{A, B, C} -> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
-          wxTextCtrl:setLabel(TextCtrlValidation, "The master is down2" ++ A ++ B ++ C)
+        _: _ -> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),%%{_Type, _Msg, _Reason}
+          wxTextCtrl:setLabel(TextCtrlValidation, "The master is down, \ntry again in a few moments")
       end;
     false -> wxTextCtrl:setForegroundColour(TextCtrlValidation, ?wxRED),
       wxTextCtrl:setLabel(TextCtrlValidation, "The input is invalid")
@@ -455,14 +456,17 @@ getValueForSorting(Movie = #movie_data{}, SortParam) ->
 
 %% Function for a process which monitors the master node status, and informs the client if the master node is down
 monitorMaster(FromPID, MasterNode) ->
-  gen_server:cast({masterpid, list_to_atom(MasterNode)},ping),
+  gen_server:cast({masterpid, list_to_atom(MasterNode)}, ping),
   net_kernel:monitor_nodes(true),
-  receive
-    {nodedown, MasterNode} -> FromPID ! masterdown;
-    shutdown -> void;
-    _ -> monitorMaster(FromPID, MasterNode)
-  end.
+  monitorMasterReceive(FromPID, MasterNode).
 
+monitorMasterReceive(FromPID, MasterNode) ->
+  MasterNodeAtom = list_to_atom(MasterNode),
+  receive
+    {nodedown, MasterNodeAtom} -> FromPID ! masterdown;
+    shutdown -> void;
+    _ -> monitorMasterReceive(FromPID, MasterNode)
+  end.
 
 
 
