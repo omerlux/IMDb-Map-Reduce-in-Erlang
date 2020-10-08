@@ -1,5 +1,5 @@
-# Project-Ilay-Omer - Mapreduce IMDb in erlang
- This is the final project of "Functional programming in concurrent and distributed systems", by Ilay and Omer
+# Project-Ilay-Omer - IMDb Map-Reduce Project in Erlang
+ This is the final project of "Functional programming in concurrent and distributed systems", by Ilay and Omer. Demonstration on [YouTube](https://youtu.be/u_CJGBQcP_M).
  
 - ### General Info:
  
