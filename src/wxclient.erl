@@ -220,7 +220,7 @@ handle_click_event(A = #wx{}, _B) ->
             %% Finding statistics -----------------------------------------------------------
             OrganizeTime = round(timer:now_diff(os:timestamp(), ReceiveTime) / 1000),
             General = integer_to_list(NumberOfResults) ++ " Results | " ++ integer_to_list(Servers) ++ " Servers" ++ " | Evaluation Time: "
-              ++ integer_to_list(TotalTime) ++ "ms" ++ " | Organize Time: " ++ integer_to_list(OrganizeTime),
+              ++ integer_to_list(TotalTime) ++ "ms" ++ " | Organize Time: " ++ integer_to_list(OrganizeTime) ++ "ms",
             YearStat = case Categories2Show#movie_data.year of % check if there are answers of year
                          true -> YearList = [list_to_integer(Y#movie_data.year) || Y <- Movies],
                            "\nYear - Min " ++ integer_to_list(lists:min(YearList)) ++ " | Max " ++
