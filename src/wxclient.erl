@@ -204,7 +204,8 @@ handle_click_event(A = #wx{}, _B) ->
             wxWindow:show(WindowZero);
 
           {Servers, MoviesRaw} when is_list(MoviesRaw) and is_integer(Servers) ->
-            TotalTime = round(timer:now_diff(os:timestamp(), StartTime) / 1000),%% for performance evaluation
+            ReceiveTime = os:timestamp(),
+            TotalTime = round(timer:now_diff(ReceiveTime, StartTime) / 1000),%% for performance evaluation
             Movies = lists:sort(fun(M1 = #movie_data{}, M2 = #movie_data{}) ->
               (getValueForSorting(M1, wxListBox:getSelection(ListBoxSort)) < getValueForSorting(M2, wxListBox:getSelection(ListBoxSort))) end, MoviesRaw),
             %% Setup sizers and frames:--------------------------------------------------------------
@@ -215,18 +216,20 @@ handle_click_event(A = #wx{}, _B) ->
 
             Label = "Search value: " ++ Query#query.searchVal ++ "  | Value category: "
               ++ Query#query.searchCategory ++ "  | Sorting by: " ++ getNameForSorting(wxListBox:getSelection(ListBoxSort)),
-            Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label),
+            Headline = wxStaticText:new(Frame2, ?wxID_ANY, Label, [{style, ?wxALIGN_CENTER}]),
             %% Finding statistics -----------------------------------------------------------
-            General = integer_to_list(NumberOfResults) ++ " Results | " ++ integer_to_list(Servers) ++ " Servers" ++ " | Evaluation Time: " ++ integer_to_list(TotalTime) ++ "ms",
+            OrganizeTime = round(timer:now_diff(os:timestamp(), ReceiveTime) / 1000),
+            General = integer_to_list(NumberOfResults) ++ " Results | " ++ integer_to_list(Servers) ++ " Servers" ++ " | Evaluation Time: "
+              ++ integer_to_list(TotalTime) ++ "ms" ++ " | Organize Time: " ++ integer_to_list(OrganizeTime) ++ "ms",
             YearStat = case Categories2Show#movie_data.year of % check if there are answers of year
                          true -> YearList = [list_to_integer(Y#movie_data.year) || Y <- Movies],
-                           "\n\tYear -        Min " ++ integer_to_list(lists:min(YearList)) ++ " | Max " ++
+                           "\nYear - Min " ++ integer_to_list(lists:min(YearList)) ++ " | Max " ++
                              integer_to_list(lists:max(YearList)) ++ " | Avg " ++ io_lib:format("~.2f", [lists:sum(YearList) / NumberOfResults]);
                          false -> ""
                        end,
             DurStat = case Categories2Show#movie_data.duration of % check if there are answers of duration
                         true -> DurList = [list_to_integer(Y#movie_data.duration) || Y <- Movies, Y /= ""],
-                          "\n\tDuration - Min " ++ integer_to_list(lists:min(DurList)) ++ " | Max " ++
+                          "\nDuration - Min " ++ integer_to_list(lists:min(DurList)) ++ " | Max " ++
                             integer_to_list(lists:max(DurList)) ++ " | Avg " ++ io_lib:format("~.2f", [lists:sum(DurList) / NumberOfResults]);
                         false -> ""
                       end,
@@ -238,12 +241,12 @@ handle_click_event(A = #wx{}, _B) ->
                        end,
             AvgvoteStat = case Categories2Show#movie_data.avg_vote of % check if there are answers of duration
                             true -> AvgVoteList = [ToNumber(Y#movie_data.avg_vote) || Y <- Movies, Y /= ""],
-                              "\n\tAvg Vote - Min " ++ io_lib:format("~.1f", [lists:min(AvgVoteList)]) ++ " | Max " ++
+                              "\nScore - Min " ++ io_lib:format("~.1f", [lists:min(AvgVoteList)]) ++ " | Max " ++
                                 io_lib:format("~.1f", [lists:max(AvgVoteList)]) ++ " | Avg " ++ io_lib:format("~.2f", [lists:sum(AvgVoteList) / NumberOfResults]);
                             false -> ""
                           end,
-            LabelStatistics = "Result's Statistics: \n\t" ++ General ++ YearStat ++ DurStat ++ AvgvoteStat,
-            Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics),%% LabelStatistics is text for statistics
+            LabelStatistics = "Result's Statistics: \n" ++ General ++ YearStat ++ DurStat ++ AvgvoteStat,
+            Headline2 = wxStaticText:new(Frame2, ?wxID_ANY, LabelStatistics, [{style, ?wxALIGN_CENTER}]),%% LabelStatistics is text for statistics
 
             Grid = create_grid(Frame2, Movies, NumberOfResults, Query), %% Creating the results table:
             Image3 = wxImage:new("results.png", []),
