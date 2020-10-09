@@ -191,6 +191,8 @@ gather(ExpectedResults) ->
         false -> % this is not a server.. false alarm
           gather(ExpectedResults)
       end;
+    {nodeup, _} ->    %% to ignore nodeup
+      gather(ExpectedResults);
     Result ->
       io:format("Received result at ~p~n", [self()]),
       Result ++ gather(ExpectedResults - 1)
