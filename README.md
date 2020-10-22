@@ -29,23 +29,23 @@ c(master). c(server). c(wxclient). c(parse_csv). c(dataDistributor).
  To run ***server***, write the server's name in *@serverslist.txt* - *server#@ip*
  then at each server write the following line on terminal:
 ```
-erl -name server# -run server start_link
+erl -name server#@ip -setcookie x -run server start_link
 ```
 
  To run ***master***, write the master's name in *@clientslist.txt* (on the first line) - *master@ip*
  then at master terminal write the following line on terminal:
 ```
-erl -name master -run master start_link
+erl -name master@ip -setcookie x -run master start_link
 ```
 
  To run ***client*** (which can be on the same computer as the servers)
  then at client terminal write the following line on terminal:
 ```
-erl -name client# -run wxclient start
+erl -name client#@ip -setcookie x -run wxclient start
 ```
 If GUI won't open, do as follow:
 ```
-erl -name client#
+erl -name client#@ip -setcookie x
 wxclient:start().
 ```
 
